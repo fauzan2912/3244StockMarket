@@ -11,9 +11,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
+from statsmodels.tsa.arima.model import ARIMA
+from flask import Flask, render_template, request
+import math
 
 # Define absolute path to store dataset
-dataset_dir = "/Users/derr/Documents/CS3244/Project/3244StockMarket/resources"
+dataset_dir = "/Users/derr/Documents/CS3244/Project/3244StockMarket/stock_market/Resources"
 os.makedirs(dataset_dir, exist_ok=True)  # Ensure the directory exists
 
 # Download latest dataset version
@@ -22,24 +25,33 @@ print("Downloading dataset...")
 path = kagglehub.dataset_download("borismarjanovic/price-volume-data-for-all-us-stocks-etfs")
 print("Path to dataset files:", path)
 
-# List all .txt files
-txt_files = [f for f in os.listdir(path) if f.endswith('.txt')]
+# Recursively find all .txt files in the subdirectories
+txt_files = []
+for root, dirs, files in os.walk(path):
+    for file in files:
+        if file.endswith('.txt'):
+            txt_files.append(os.path.join(root, file))
 
-# Combine all .txt files into one DataFrame
-df_list = []
-for file in txt_files:
-    file_path = os.path.join(path, file)
-    df = pd.read_csv(file_path)  # Read each file
-    df_list.append(df)
+# Check if any .txt files were found
+print(f"Text files found: {txt_files}")
 
-# Concatenate all DataFrames
-merged_df = pd.concat(df_list, ignore_index=True)
+# Combine all .txt files into one DataFrame if files exist
+if txt_files:
+    df_list = []
+    for file in txt_files:
+        df = pd.read_csv(file)  # Read each file
+        df_list.append(df)
 
-# Save as a single CSV file
-csv_path = os.path.join(path, "merged_stock_data.csv")
-merged_df.to_csv(csv_path, index=False)
+    # Concatenate all DataFrames
+    merged_df = pd.concat(df_list, ignore_index=True)
 
-print(f"Merged CSV saved at: {csv_path}")
+    # Save as a single CSV file
+    csv_path = os.path.join(dataset_dir, "merged_stock_data.csv")
+    merged_df.to_csv(csv_path, index=False)
+
+    print(f"Merged CSV saved at: {csv_path}")
+else:
+    print("No .txt files found in the dataset.")
 
 # Load the merged dataset
 df = pd.read_csv(csv_path)
@@ -59,7 +71,7 @@ df.set_index('Date', inplace=True)
 
 # Plot stock closing price over time
 plt.figure(figsize=(10, 6))
-plt.plot(df.index, df['close'], label='Closing Price')
+plt.plot(df.index, df['Close'], label='Closing Price')
 plt.title('Stock Closing Price Over Time')
 plt.xlabel('Date')
 plt.ylabel('Close Price')
@@ -67,8 +79,8 @@ plt.legend()
 plt.show()
 
 # Compute moving averages
-df['MA_7'] = df['close'].rolling(window=7).mean()
-df['MA_30'] = df['close'].rolling(window=30).mean()
+df['MA_7'] = df['Close'].rolling(window=7).mean()
+df['MA_30'] = df['Close'].rolling(window=30).mean()
 
 # Drop rows with NaN values due to rolling window
 df.dropna(inplace=True)
@@ -79,8 +91,8 @@ train_data, test_data = df[:train_size], df[train_size:]
 
 # Normalize data
 scaler = MinMaxScaler()
-train_scaled = scaler.fit_transform(train_data[['close', 'MA_7', 'MA_30']])
-test_scaled = scaler.transform(test_data[['close', 'MA_7', 'MA_30']])
+train_scaled = scaler.fit_transform(train_data[['Close', 'MA_7', 'MA_30']])
+test_scaled = scaler.transform(test_data[['Close', 'MA_7', 'MA_30']])
 
 # Prepare features and target for Linear Regression
 X_train, y_train = train_scaled[:, 1:], train_scaled[:, 0]
@@ -152,32 +164,54 @@ optimizer = optim.Adam(lstm_model.parameters(), lr=0.001)
 num_epochs = 50
 for epoch in range(num_epochs):
     for batch_X, batch_y in train_loader:
-        # Forward pass
         outputs = lstm_model(batch_X)
         loss = criterion(outputs, batch_y)
-
-        # Backward pass and optimization
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
-# Predict with LSTM
-lstm_model.eval()
-with torch.no_grad():
-    y_pred_lstm = lstm_model(X_test_tensor).cpu().numpy()
+# ARIMA Model
+def arima_model(train, test):
+    history = [x for x in train]
+    predictions = list()
+    for t in range(len(test)):
+        model = ARIMA(history, order=(5, 1, 0))
+        model_fit = model.fit()
+        output = model_fit.forecast()
+        yhat = output[0]
+        predictions.append(yhat)
+        obs = test[t]
+        history.append(obs)
+    return predictions
 
-mse_lstm = mean_squared_error(y_test_seq, y_pred_lstm)
-mae_lstm = mean_absolute_error(y_test_seq, y_pred_lstm)
-print(f'LSTM MSE: {mse_lstm:.4f}, MAE: {mae_lstm:.4f}')
+# Prepare data for ARIMA
+train_arima = train_data['Close'].values
+test_arima = test_data['Close'].values
 
-# Plot actual vs. predicted values
-plt.figure(figsize=(10, 6))
-plt.plot(y_test_seq, label='Actual')
-plt.plot(y_pred_lstm, label='Predicted')
-plt.title('LSTM Model Prediction')
-plt.xlabel('Time Steps')
-plt.ylabel('Close Price')
-plt.legend()
-plt.show()
+# Fit ARIMA model
+arima_predictions = arima_model(train_arima, test_arima)
+
+# Evaluate ARIMA
+mse_arima = mean_squared_error(test_arima, arima_predictions)
+print(f'ARIMA MSE: {mse_arima:.4f}')
+
+# Flask App
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    stock_symbol = request.form['stock_symbol']
+    # Here you can add logic to fetch data for the specific stock symbol
+    # For now, we'll use the existing data
+    return render_template('results.html',
+                           lr_pred=round(y_pred[-1], 2),
+                           lstm_pred=round(lstm_model(X_test_tensor[-1].unsqueeze(0)).item(), 2),
+                           arima_pred=round(arima_predictions[-1], 2))
+
+if __name__ == '__main__':
+    app.run(debug=True)
