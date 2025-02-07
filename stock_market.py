@@ -6,6 +6,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
+<<<<<<< HEAD
 import os
 
 # Define dataset path
@@ -27,6 +28,15 @@ full_path = os.path.join(path, file_name)
 df = pd.read_csv(full_path, delimiter=",")  # Using "," since it follows CSV format
 print("First few rows of the dataset:")
 print(df.head())
+=======
+import kagglehub
+
+# Force re-download
+path = kagglehub.dataset_download("borismarjanovic/price-volume-data-for-all-us-stocks-etfs")
+print("Dataset downloaded to:", path)
+df = pd.read_csv(path + "/stock_data.csv")
+
+>>>>>>> origin/main
 
 # Display first few rows
 display(df.head())
