@@ -1,0 +1,9 @@
+kagglehub
+numpy
+pandas
+scikit-learn
+matplotlib
+torch
+statsmodels
+flask
+ipython
