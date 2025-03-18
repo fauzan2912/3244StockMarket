@@ -8,32 +8,40 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import shap
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+import os
 
-# Assuming your friend's code is in a module named `data_processing.py`
 from data_loader import get_stocks, get_technical_indicators
 
 # Set random seed for reproducibility
 np.random.seed(42)
+
+# Define the directory to save results
+RESULTS_DIR = "/Users/derr/Documents/CS3244/Project/3244StockMarket/Results/XGBoost"
+
+# Create the directory if it doesn't exist
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 def prepare_data(df, horizon=1):
     """Prepare features and target for a given prediction horizon."""
     features = ['Open', 'High', 'Low', 'Close', 'Volume', 'MACD', 'Signal', 'Hist',
                 'RSI', 'K', 'D', 'J', 'OSC', 'BOLL_Mid', 'BOLL_Upper', 'BOLL_Lower', 'BIAS']
     df['Target'] = (df['Close'].shift(-horizon) > df['Close']).astype(int)
-    df = df.dropna()  # Drop rows with NaN values due to shifting or indicators
+    df = df.dropna()
     X = df[features]
     y = df['Target']
     return X, y
 
-def rolling_window_train_predict(df, window_size=730, horizon=1):
-    """Train and predict using a rolling window strategy."""
+def rolling_window_train_predict(df, window_size=730, horizon=1, step_size=30):
+    """Train and predict using a rolling window strategy with a step size."""
     X, y = prepare_data(df, horizon)
     predictions = []
     actuals = []
 
-    for i in range(window_size, len(df) - horizon):
+    i = window_size
+    while i < len(df) - horizon:
         train_data = df.iloc[i - window_size:i]
-        test_data = df.iloc[i:i + horizon]
+        test_end = min(i + step_size, len(df) - horizon)
+        test_data = df.iloc[i:test_end]
 
         X_train = train_data.drop(columns=['Stock', 'Date', 'Target'])
         y_train = train_data['Target']
@@ -43,24 +51,35 @@ def rolling_window_train_predict(df, window_size=730, horizon=1):
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
 
-        model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+        model = XGBClassifier(
+            eval_metric='logloss',
+            random_state=42,
+            verbosity=0,
+            n_estimators=50,
+            max_depth=3,
+            learning_rate=0.1
+        )
         model.fit(X_train_scaled, y_train)
 
         y_pred = model.predict(X_test_scaled)
         predictions.extend(y_pred)
         actuals.extend(test_data['Target'].values)
+
+        i += step_size
 
     return predictions, actuals
 
-def expanding_window_train_predict(df, initial_window=730, horizon=1):
-    """Train and predict using an expanding window strategy."""
+def expanding_window_train_predict(df, initial_window=730, horizon=1, step_size=30):
+    """Train and predict using an expanding window strategy with a step size."""
     X, y = prepare_data(df, horizon)
     predictions = []
     actuals = []
 
-    for i in range(initial_window, len(df) - horizon):
+    i = initial_window
+    while i < len(df) - horizon:
         train_data = df.iloc[:i]
-        test_data = df.iloc[i:i + horizon]
+        test_end = min(i + step_size, len(df) - horizon)
+        test_data = df.iloc[i:test_end]
 
         X_train = train_data.drop(columns=['Stock', 'Date', 'Target'])
         y_train = train_data['Target']
@@ -70,12 +89,21 @@ def expanding_window_train_predict(df, initial_window=730, horizon=1):
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
 
-        model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+        model = XGBClassifier(
+            eval_metric='logloss',
+            random_state=42,
+            verbosity=0,
+            n_estimators=50,
+            max_depth=3,
+            learning_rate=0.1
+        )
         model.fit(X_train_scaled, y_train)
 
         y_pred = model.predict(X_test_scaled)
         predictions.extend(y_pred)
         actuals.extend(test_data['Target'].values)
+
+        i += step_size
 
     return predictions, actuals
 
@@ -92,9 +120,25 @@ def compute_shap_values(model, X):
     shap_values = explainer.shap_values(X)
     return shap_values
 
+def save_results(horizon, strategy, y_true, y_pred, results_dir):
+    """Save prediction results to a CSV file."""
+    accuracy, f1, roc_auc = evaluate_model(y_true, y_pred)
+    results_df = pd.DataFrame({
+        'Horizon': [horizon],
+        'Strategy': [strategy],
+        'Accuracy': [accuracy],
+        'F1-Score': [f1],
+        'ROC-AUC': [roc_auc]
+    })
+    results_file = os.path.join(results_dir, f'results_horizon_{horizon}_{strategy}.csv')
+    results_df.to_csv(results_file, index=False)
+    print(f"Saved results to {results_file}")
+    return accuracy, f1, roc_auc
+
 def main():
     # Load and preprocess data (focusing on one stock for simplicity, e.g., 'AAPL')
     df = get_stocks('AAPL')
+    # df = df.tail(1000)  # Uncomment to test on a smaller dataset
     df = get_technical_indicators(df)
 
     horizons = [1, 3, 7, 30, 90]  # 1 day, 3 days, 1 week, 1 month, 3 months
@@ -104,14 +148,14 @@ def main():
 
         # Rolling Window
         print("Rolling Window Strategy:")
-        roll_preds, roll_actuals = rolling_window_train_predict(df, window_size=730, horizon=horizon)
-        roll_acc, roll_f1, roll_roc_auc = evaluate_model(roll_actuals, roll_preds)
+        roll_preds, roll_actuals = rolling_window_train_predict(df, window_size=730, horizon=horizon, step_size=30)
+        roll_acc, roll_f1, roll_roc_auc = save_results(horizon, 'rolling', roll_actuals, roll_preds, RESULTS_DIR)
         print(f"Accuracy: {roll_acc:.4f}, F1-Score: {roll_f1:.4f}, ROC-AUC: {roll_roc_auc:.4f}")
 
         # Expanding Window
         print("Expanding Window Strategy:")
-        exp_preds, exp_actuals = expanding_window_train_predict(df, initial_window=730, horizon=horizon)
-        exp_acc, exp_f1, exp_roc_auc = evaluate_model(exp_actuals, exp_preds)
+        exp_preds, exp_actuals = expanding_window_train_predict(df, initial_window=730, horizon=horizon, step_size=30)
+        exp_acc, exp_f1, exp_roc_auc = save_results(horizon, 'expanding', exp_actuals, exp_preds, RESULTS_DIR)
         print(f"Accuracy: {exp_acc:.4f}, F1-Score: {exp_f1:.4f}, ROC-AUC: {exp_roc_auc:.4f}")
 
         # Train final model for SHAP analysis (using full data up to last horizon days)
@@ -121,14 +165,23 @@ def main():
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
 
-        model = XGBClassifier(use_label_encoder=False, eval_metric='logloss', random_state=42)
+        model = XGBClassifier(
+            eval_metric='logloss',
+            random_state=42,
+            verbosity=0,
+            n_estimators=50,
+            max_depth=3,
+            learning_rate=0.1
+        )
         model.fit(X_train_scaled, y_train)
 
         # SHAP Analysis
         shap_values = compute_shap_values(model, X_test_scaled)
         shap.summary_plot(shap_values, X_test, feature_names=X.columns)
-        plt.savefig(f'shap_summary_horizon_{horizon}.png')
+        shap_plot_file = os.path.join(RESULTS_DIR, f'shap_summary_horizon_{horizon}.png')
+        plt.savefig(shap_plot_file)
         plt.close()
+        print(f"Saved SHAP plot to {shap_plot_file}")
 
 if __name__ == "__main__":
     main()
