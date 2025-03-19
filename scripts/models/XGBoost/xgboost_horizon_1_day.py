@@ -9,19 +9,26 @@ import shap
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 import os
+import sys
 
+# Add the parent directory to sys.path to find data_loader
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from data_loader import get_stocks, get_technical_indicators
 
 # Set random seed for reproducibility
 np.random.seed(42)
 
-# Define the directory to save results
-RESULTS_DIR = "/Users/derr/Documents/CS3244/Project/3244StockMarket/Results/XGBoost"
+# Define the directory to save results relative to the project root
+BASE_DIR = "/Users/derr/Documents/CS3244/Project/3244StockMarket"
+RESULTS_DIR = os.path.join(BASE_DIR, "Results", "XGBoost")
 
 # Create the directory if it doesn't exist
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-def prepare_data(df, horizon=1):
+# Define the horizon for this script
+HORIZON = 1  # 1 day
+
+def prepare_data(df, horizon=HORIZON):
     """Prepare features and target for a given prediction horizon."""
     features = ['Open', 'High', 'Low', 'Close', 'Volume', 'MACD', 'Signal', 'Hist',
                 'RSI', 'K', 'D', 'J', 'OSC', 'BOLL_Mid', 'BOLL_Upper', 'BOLL_Lower', 'BIAS']
@@ -31,7 +38,7 @@ def prepare_data(df, horizon=1):
     y = df['Target']
     return X, y
 
-def rolling_window_train_predict(df, window_size=730, horizon=1, step_size=30):
+def rolling_window_train_predict(df, window_size=730, horizon=HORIZON, step_size=30):
     """Train and predict using a rolling window strategy with a step size."""
     X, y = prepare_data(df, horizon)
     predictions = []
@@ -69,7 +76,7 @@ def rolling_window_train_predict(df, window_size=730, horizon=1, step_size=30):
 
     return predictions, actuals
 
-def expanding_window_train_predict(df, initial_window=730, horizon=1, step_size=30):
+def expanding_window_train_predict(df, initial_window=730, horizon=HORIZON, step_size=30):
     """Train and predict using an expanding window strategy with a step size."""
     X, y = prepare_data(df, horizon)
     predictions = []
@@ -141,47 +148,44 @@ def main():
     # df = df.tail(1000)  # Uncomment to test on a smaller dataset
     df = get_technical_indicators(df)
 
-    horizons = [1, 3, 7, 30, 90]  # 1 day, 3 days, 1 week, 1 month, 3 months
+    print(f"\n=== Prediction Horizon: {HORIZON} Day(s) ===")
 
-    for horizon in horizons:
-        print(f"\n=== Prediction Horizon: {horizon} Day(s) ===")
+    # Rolling Window
+    print("Rolling Window Strategy:")
+    roll_preds, roll_actuals = rolling_window_train_predict(df, window_size=730, horizon=HORIZON, step_size=30)
+    roll_acc, roll_f1, roll_roc_auc = save_results(HORIZON, 'rolling', roll_actuals, roll_preds, RESULTS_DIR)
+    print(f"Accuracy: {roll_acc:.4f}, F1-Score: {roll_f1:.4f}, ROC-AUC: {roll_roc_auc:.4f}")
 
-        # Rolling Window
-        print("Rolling Window Strategy:")
-        roll_preds, roll_actuals = rolling_window_train_predict(df, window_size=730, horizon=horizon, step_size=30)
-        roll_acc, roll_f1, roll_roc_auc = save_results(horizon, 'rolling', roll_actuals, roll_preds, RESULTS_DIR)
-        print(f"Accuracy: {roll_acc:.4f}, F1-Score: {roll_f1:.4f}, ROC-AUC: {roll_roc_auc:.4f}")
+    # Expanding Window
+    print("Expanding Window Strategy:")
+    exp_preds, exp_actuals = expanding_window_train_predict(df, initial_window=730, horizon=HORIZON, step_size=30)
+    exp_acc, exp_f1, exp_roc_auc = save_results(HORIZON, 'expanding', exp_actuals, exp_preds, RESULTS_DIR)
+    print(f"Accuracy: {exp_acc:.4f}, F1-Score: {exp_f1:.4f}, ROC-AUC: {exp_roc_auc:.4f}")
 
-        # Expanding Window
-        print("Expanding Window Strategy:")
-        exp_preds, exp_actuals = expanding_window_train_predict(df, initial_window=730, horizon=horizon, step_size=30)
-        exp_acc, exp_f1, exp_roc_auc = save_results(horizon, 'expanding', exp_actuals, exp_preds, RESULTS_DIR)
-        print(f"Accuracy: {exp_acc:.4f}, F1-Score: {exp_f1:.4f}, ROC-AUC: {exp_roc_auc:.4f}")
+    # Train final model for SHAP analysis (using full data up to last horizon days)
+    X, y = prepare_data(df, HORIZON)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-        # Train final model for SHAP analysis (using full data up to last horizon days)
-        X, y = prepare_data(df, horizon)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
+    model = XGBClassifier(
+        eval_metric='logloss',
+        random_state=42,
+        verbosity=0,
+        n_estimators=50,
+        max_depth=3,
+        learning_rate=0.1
+    )
+    model.fit(X_train_scaled, y_train)
 
-        model = XGBClassifier(
-            eval_metric='logloss',
-            random_state=42,
-            verbosity=0,
-            n_estimators=50,
-            max_depth=3,
-            learning_rate=0.1
-        )
-        model.fit(X_train_scaled, y_train)
-
-        # SHAP Analysis
-        shap_values = compute_shap_values(model, X_test_scaled)
-        shap.summary_plot(shap_values, X_test, feature_names=X.columns)
-        shap_plot_file = os.path.join(RESULTS_DIR, f'shap_summary_horizon_{horizon}.png')
-        plt.savefig(shap_plot_file)
-        plt.close()
-        print(f"Saved SHAP plot to {shap_plot_file}")
+    # SHAP Analysis
+    shap_values = compute_shap_values(model, X_test_scaled)
+    shap.summary_plot(shap_values, X_test, feature_names=X.columns)
+    shap_plot_file = os.path.join(RESULTS_DIR, f'shap_summary_horizon_{HORIZON}.png')
+    plt.savefig(shap_plot_file)
+    plt.close()
+    print(f"Saved SHAP plot to {shap_plot_file}")
 
 if __name__ == "__main__":
     main()
