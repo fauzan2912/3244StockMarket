@@ -11,7 +11,7 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import make_scorer, accuracy_score, f1_score
 import xgboost as xgb
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import data loader
 from src.data_loader import get_stocks, get_technical_indicators
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
+from 
 
 # Define custom scorer for Sharpe ratio
 def sharpe_ratio_scorer(y_true, y_pred, returns):
@@ -178,6 +179,7 @@ def tune_logistic_regression(X_train, y_train, X_test, y_test, test_returns):
     
     return results, best_model
 
+
 def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     """
     Tune hyperparameters for random forest
@@ -205,19 +207,16 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     }
     
     # Define the model
-    rf = RandomForestClassifier()
+    rf = RandomForestRegressor()
     
     # Create custom scorer that uses test returns for Sharpe ratio
-    def custom_sharpe_scorer(estimator, X, y):
-        y_pred = estimator.predict(X)
-        return sharpe_ratio_scorer(y, y_pred, test_returns)
-    
-    # Create randomized search for faster tuning
+    scorer = make_scorer(r2_score)
+
     random_search = RandomizedSearchCV(
         estimator=rf,
         param_distributions=param_grid,
-        n_iter=20,  # Number of parameter settings to try
-        scoring=custom_sharpe_scorer,
+        n_iter=20,
+        scoring=scorer,
         cv=5,
         n_jobs=-1,
         verbose=1,
@@ -231,14 +230,14 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     best_params = random_search.best_params_
     
     # Train model with best parameters
-    best_model = RandomForestClassifier(**best_params)
+    best_model = RandomForestRegressor(**best_params)
     best_model.fit(X_train, y_train)
     
     # Make predictions on test set
     y_pred = best_model.predict(X_test)
     
-    # Calculate accuracy
-    accuracy = accuracy_score(y_test, y_pred)
+    # Calculate r2 score
+    r2 = r2_score(y_test, y_pred)
     
     # Calculate Sharpe ratio
     strategy_returns = calculate_returns(y_pred, test_returns)
@@ -247,7 +246,7 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     # Create results dictionary
     results = {
         'best_params': best_params,
-        'accuracy': accuracy,
+        'r2 score': r2,
         'sharpe_ratio': sharpe,
         'cv_results': {
             'mean_test_score': random_search.cv_results_['mean_test_score'].tolist(),
@@ -256,10 +255,11 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     }
     
     print(f"--- Best Parameters: {best_params}")
-    print(f"--- Test Accuracy: {accuracy:.4f}")
+    print(f"--- R² Score on Test Set: {r2:.4f}")
     print(f"--- Sharpe Ratio: {sharpe:.4f}")
     
     return results, best_model
+    
 
 def tune_xgboost(X_train, y_train, X_test, y_test, test_returns):
     """
