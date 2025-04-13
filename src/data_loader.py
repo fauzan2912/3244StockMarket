@@ -208,7 +208,7 @@ def get_etfs(etfs=None, start_date=None, end_date=None):
     
     return df
 
-def get_technical_indicators(df, horizon = 252):
+def get_technical_indicators(df):
     """Calculates and adds technical indicators and price-based features to the DataFrame."""
 
     import numpy as np
@@ -219,8 +219,6 @@ def get_technical_indicators(df, horizon = 252):
         raise ValueError(f"Missing columns: {required_columns - set(df.columns)}")
 
     df = df.copy()
-    # PERCENTAGE RETURNS
-    df['Pct_Return'] = df['Close'].pct_change(horizon).shift(-horizon) #Horizon of 252 used since it's the estimated number of trading days per year
     
     # MACD
     df['EMA12'] = df['Close'].ewm(span=12, adjust=False).mean()
