@@ -7,6 +7,7 @@ import pickle
 import kagglehub
 import shutil
 import concurrent.futures  # For parallel processing
+from datetime import datetime
 
 # Define paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))  # Go up one level
@@ -20,16 +21,16 @@ os.makedirs(DATA_DIR, exist_ok=True)
 def download_dataset():
     """Downloads dataset only if it doesn't already exist."""
     if os.path.exists(ETFS_FILE) and os.path.exists(STOCKS_FILE):
-        print("✅ Processed data already exists. Skipping download.")
+        print("[OK] Processed data already exists. Skipping download.")
         return None  # No need to download
 
     dataset_name = "borismarjanovic/price-volume-data-for-all-us-stocks-etfs"
-    print(f"📥 Downloading dataset: {dataset_name}")
+    print(f"[DOWNLOAD] Downloading dataset: {dataset_name}")
 
     # Download dataset
     path = kagglehub.dataset_download(dataset_name)
 
-    print(f"✅ Dataset downloaded to: {path}")
+    print(f"[OK] Dataset downloaded to: {path}")
     return path
 
 def clean_stock_name(filename):
@@ -50,13 +51,13 @@ def process_file(file_path):
         df.insert(0, "Stock", stock_name)
         return df
     except Exception as e:
-        print(f"❌ Error processing {file_path}: {e}")
+        print(f"[ERROR] Error processing {file_path}: {e}")
         return None
 
 def load_and_preprocess_data(folder_path, dataset_type, selected_symbols=None):
     """Loads and preprocesses stock or ETF data in parallel."""
     if not os.path.exists(folder_path):
-        print(f"❌ Directory not found: {folder_path}")
+        print(f"[ERROR] Directory not found: {folder_path}")
         return pd.DataFrame()
 
     files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith(".txt")]
@@ -92,16 +93,16 @@ def load_and_preprocess_data(folder_path, dataset_type, selected_symbols=None):
     features = ['Open', 'High', 'Low', 'Close', 'Volume']
     df_combined = df_combined[['Stock', 'Date'] + features + ['Target']]
 
-    print(f"✅ Processed {dataset_type} dataset with {len(df_combined)} records.")
+    print(f"[OK] Processed {dataset_type} dataset with {len(df_combined)} records.")
     return df_combined
 
 def process_data():
     """Downloads and processes data if not already done."""
     if os.path.exists(ETFS_FILE) and os.path.exists(STOCKS_FILE):
-        print("✅ Processed data already exists. Skipping processing.")
+        print("[OK] Processed data already exists. Skipping processing.")
         return
 
-    print("\n🚀 Downloading and Processing Data...\n")
+    print("\n[START] Downloading and Processing Data...\n")
     raw_data_path = download_dataset()
     
     if not raw_data_path:
@@ -123,16 +124,18 @@ def process_data():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(shutil.rmtree, raw_data_path)
 
-    print("🗑️ Raw dataset removed to save space.")
+    print("[CLEAN] Raw dataset removed to save space.")
 
-    print("\n✅ Data Processing Completed!\n")
+    print("\n[OK] Data Processing Completed!\n")
 
-def get_stocks(stocks=None):
-    """Returns a DataFrame of selected stocks (default: all).
+def get_stocks(stocks=None, start_date=None, end_date=None):
+    """Returns a DataFrame of selected stocks (default: all) with optional date filtering.
     
     - `stocks="NVDA"` (string) → Returns only NVDA
     - `stocks=["NVDA", "AAPL"]` (list) → Returns NVDA & AAPL
     - `stocks=None` → Returns all stocks
+    - `start_date="2016-01-01"` (string) → Filter from this date
+    - `end_date="2016-12-31"` (string) → Filter until this date
     """
     process_data()
     with open(STOCKS_FILE, "rb") as f:
@@ -145,15 +148,34 @@ def get_stocks(stocks=None):
     # Apply filtering if stocks are provided
     if stocks:
         df = df[df["Stock"].isin(stocks)]
-
+    
+    # Apply date filtering if provided
+    if start_date:
+        if isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+        df = df[df["Date"] >= start_date]
+    
+    if end_date:
+        if isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
+        df = df[df["Date"] <= end_date]
+    
+    # Print date range of data
+    if not df.empty:
+        min_date = df["Date"].min().strftime("%Y-%m-%d")
+        max_date = df["Date"].max().strftime("%Y-%m-%d")
+        print(f"[INFO] Date range: {min_date} to {max_date}")
+    
     return df
 
-def get_etfs(etfs=None):
-    """Returns a DataFrame of selected ETFs (default: all).
+def get_etfs(etfs=None, start_date=None, end_date=None):
+    """Returns a DataFrame of selected ETFs (default: all) with optional date filtering.
     
     - `etfs="SPY"` (string) → Returns only SPY
     - `etfs=["SPY", "QQQ"]` (list) → Returns SPY & QQQ
     - `etfs=None` → Returns all ETFs
+    - `start_date="2016-01-01"` (string) → Filter from this date
+    - `end_date="2016-12-31"` (string) → Filter until this date
     """
     process_data()
     with open(ETFS_FILE, "rb") as f:
@@ -166,17 +188,37 @@ def get_etfs(etfs=None):
     # Apply filtering if ETFs are provided
     if etfs:
         df = df[df["Stock"].isin(etfs)]
-
+    
+    # Apply date filtering if provided
+    if start_date:
+        if isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+        df = df[df["Date"] >= start_date]
+    
+    if end_date:
+        if isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
+        df = df[df["Date"] <= end_date]
+    
+    # Print date range of data
+    if not df.empty:
+        min_date = df["Date"].min().strftime("%Y-%m-%d")
+        max_date = df["Date"].max().strftime("%Y-%m-%d")
+        print(f"[INFO] Date range: {min_date} to {max_date}")
+    
     return df
 
 def get_technical_indicators(df):
-    """Calculates and adds technical indicators to the DataFrame."""
+    """Calculates and adds technical indicators and price-based features to the DataFrame."""
+
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler
 
     required_columns = {'Close', 'Open', 'High', 'Low', 'Volume', 'Date'}
     if not required_columns.issubset(df.columns):
         raise ValueError(f"Missing columns: {required_columns - set(df.columns)}")
 
-    df = df.copy()  # Avoid modifying the original DataFrame
+    df = df.copy()
 
     # MACD
     df['EMA12'] = df['Close'].ewm(span=12, adjust=False).mean()
@@ -184,37 +226,72 @@ def get_technical_indicators(df):
     df['MACD'] = df['EMA12'] - df['EMA26']
     df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
     df['Hist'] = df['MACD'] - df['Signal']
+    df['MACD_Buy'] = df['MACD'] > df['Signal']
+    df['MACD_Sell'] = df['MACD'] < df['Signal']
 
     # RSI
     delta = df['Close'].diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
-    avg_gain = gain.ewm(span=14, adjust=False).mean()
-    avg_loss = loss.ewm(span=14, adjust=False).mean()
+    avg_gain = gain.rolling(window=14).mean()
+    avg_loss = loss.rolling(window=14).mean()
     rs = avg_gain / avg_loss
     df['RSI'] = 100 - (100 / (1 + rs))
+    df['RSI_Buy'] = df['RSI'] < 30
+    df['RSI_Sell'] = df['RSI'] > 70
 
     # KDJ
-    df['Low_Min'] = df['Low'].rolling(window=9, min_periods=9).min()
-    df['High_Max'] = df['High'].rolling(window=9, min_periods=9).max()
+    df['Low_Min'] = df['Low'].rolling(window=9).min()
+    df['High_Max'] = df['High'].rolling(window=9).max()
     df['RSV'] = (df['Close'] - df['Low_Min']) / (df['High_Max'] - df['Low_Min']) * 100
-    df['K'] = df['RSV'].ewm(com=2).mean()
-    df['D'] = df['K'].ewm(com=2).mean()
+    df['K'] = df['RSV'].ewm(alpha=1/3).mean()
+    df['D'] = df['K'].ewm(alpha=1/3).mean()
     df['J'] = 3 * df['K'] - 2 * df['D']
 
     # OSC
-    df['OSC'] = ((df['Close'].rolling(window=5).mean() - df['Close'].rolling(window=10).mean())
-                 / df['Close'].rolling(window=10).mean()) * 100
+    df['OSC'] = (df['Close'].rolling(window=5).mean() - df['Close'].rolling(window=10).mean()) / df['Close'].rolling(window=10).mean() * 100
+    df['OSC_Buy'] = df['OSC'] > 0
+    df['OSC_Sell'] = df['OSC'] < 0
 
     # Bollinger Bands
     df['BOLL_Mid'] = df['Close'].rolling(window=20).mean()
     df['BOLL_STD'] = df['Close'].rolling(window=20).std()
     df['BOLL_Upper'] = df['BOLL_Mid'] + 2 * df['BOLL_STD']
     df['BOLL_Lower'] = df['BOLL_Mid'] - 2 * df['BOLL_STD']
+    df['BOLL_Buy'] = df['Close'] <= df['BOLL_Lower']
+    df['BOLL_Sell'] = df['Close'] >= df['BOLL_Upper']
 
     # BIAS
-    df['BIAS'] = ((df['Close'] - df['Close'].rolling(window=6).mean())
-                  / df['Close'].rolling(window=6).mean()) * 100
+    df['BIAS'] = ((df['Close'] - df['Close'].rolling(window=6).mean()) / df['Close'].rolling(window=6).mean()) * 100
+    df['BIAS_Buy'] = df['BIAS'] < 0
+    df['BIAS_Sell'] = df['BIAS'] > 0
 
-    print("✅ Technical indicators added successfully.")
+    # Stochastics
+    df['%K'] = df['RSV']
+    df['%D'] = df['%K'].rolling(window=3).mean()
+    df['STOCHS_Buy'] = (df['%K'] > df['%D']) & (df['%K'] < 20)
+    df['STOCHS_Sell'] = (df['%K'] < df['%D']) & (df['%K'] > 80)
+
+    # ADX (simplified proxy)
+    df['+DI'] = 100 * (df['High'] - df['Low']).rolling(window=14).mean()
+    df['-DI'] = 100 * (df['Low'] - df['High']).rolling(window=14).mean()
+    df['ADX'] = (df['+DI'] - df['-DI']).abs().rolling(window=14).mean()
+    df['ADX_Buy'] = df['ADX'] > 25
+    df['ADX_Sell'] = df['ADX'] < 25
+
+    # Aroon
+    df['Aroon_Up'] = 100 * df['High'].rolling(window=25).apply(lambda x: x.argmax() / 25, raw=True)
+    df['Aroon_Down'] = 100 * df['Low'].rolling(window=25).apply(lambda x: x.argmin() / 25, raw=True)
+    df['Aroon_Buy'] = df['Aroon_Up'] > df['Aroon_Down']
+    df['Aroon_Sell'] = df['Aroon_Up'] < df['Aroon_Down']
+
+    # Price Differencing
+    df['Close_Diff_1'] = df['Close'].diff(1)
+    df['Close_Diff_1'] = StandardScaler().fit_transform(df[['Close_Diff_1']].fillna(0))
+
+    # Lagged Prices
+    df['Close_Lag_1'] = df['Close'].shift(1)
+    df['Close_Lag_1'] = df['Close_Lag_1'].fillna(method='bfill')  # Handle NaN in the first row
+
+    print("[OK] Full technical indicators and price features added.")
     return df
