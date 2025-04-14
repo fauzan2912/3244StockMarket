@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models
 from src.models.model_logistic import LogisticModel
+from src.models.model_lstm import LstmModel
 
 # Import data loader
 from src.data_loader import get_stocks, get_technical_indicators
@@ -203,8 +204,23 @@ def train_model_for_stock(stock_symbol, model_type, start_date=None, end_date=No
     
     elif model_type == 'lstm':
         # Add code for LSTM model training
-        print(f"\n--- LSTM training not yet implemented for {stock_symbol} ---")
-        return None
+        print(f"\n--- Training LSTM for {stock_symbol} ---")
+        model = LstmModel(len(feature_cols))
+        model.train(X_train, y_train)
+        
+        # Save model
+        model_path = save_model(model, "lstm", stock_symbol)
+        
+        # Return model info
+        return {
+            'stock': stock_symbol,
+            'model_type': 'logistic',
+            'train_samples': len(X_train),
+            'test_samples': len(X_test), 
+            'feature_count': len(feature_cols),
+            'model_path': model_path,
+            'training_accuracy': model.accuracy
+        }
     
     elif model_type == 'attention':
         # Add code for Attention LSTM model training
