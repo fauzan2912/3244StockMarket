@@ -239,6 +239,9 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     # Evaluation metrics
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
+
+    strategy_returns = calculate_returns(y_pred, test_returns)
+    sharpe = calculate_sharpe_ratio(strategy_returns)
     
     print(f"--- Best Parameters: {best_params}")
     print(f"--- Accuracy on Test Set: {accuracy:.4f}")
@@ -251,6 +254,8 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
         'best_params': best_params,
         'accuracy': accuracy,
         'f1_score': f1,
+        'sharpe_ratio': sharpe,
+        'classification_report': classification_report(y_test, y_pred, output_dict=True),
         'cv_results': {
             'mean_test_score': random_search.cv_results_['mean_test_score'].tolist(),
             'params': [str(p) for p in random_search.cv_results_['params']]
@@ -258,6 +263,7 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     }
     
     return results, best_model
+
 
 
 def tune_xgboost(X_train, y_train, X_test, y_test, test_returns):
