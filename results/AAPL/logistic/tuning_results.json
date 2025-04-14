@@ -1,0 +1,41 @@
+{
+    "best_params": {
+        "C": 0.001,
+        "max_iter": 1000,
+        "penalty": "l1",
+        "random_state": 42,
+        "solver": "liblinear"
+    },
+    "accuracy": 0.5111111111111111,
+    "sharpe_ratio": 3.52546547393461,
+    "cv_results": {
+        "mean_test_score": [
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN,
+            NaN
+        ],
+        "params": [
+            "{'C': 0.001, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 0.001, 'max_iter': 1000, 'penalty': 'l2', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 0.01, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 0.01, 'max_iter': 1000, 'penalty': 'l2', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 0.1, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 0.1, 'max_iter': 1000, 'penalty': 'l2', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 1, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 1, 'max_iter': 1000, 'penalty': 'l2', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 10, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 10, 'max_iter': 1000, 'penalty': 'l2', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 100, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",
+            "{'C': 100, 'max_iter': 1000, 'penalty': 'l2', 'random_state': 42, 'solver': 'liblinear'}"
+        ]
+    }
+}

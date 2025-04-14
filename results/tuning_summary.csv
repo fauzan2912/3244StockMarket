@@ -1,0 +1,3 @@
+stock,model_type,best_params,accuracy,sharpe_ratio,train_samples,test_samples
+AAPL,logistic,"{'C': 0.001, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",0.5111111111111111,3.52546547393461,180,45
+MSFT,logistic,"{'C': 0.001, 'max_iter': 1000, 'penalty': 'l1', 'random_state': 42, 'solver': 'liblinear'}",0.4888888888888889,1.0817199934443067,180,45
