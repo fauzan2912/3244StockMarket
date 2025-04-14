@@ -3,12 +3,8 @@ from sklearn.ensemble import RandomForestClassifier
 import pickle
 
 class RandomForestModel:
-    def __init__(self, n_estimators=100, max_depth=None, random_state=42):
-        self.model = RandomForestClassifier(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            random_state=random_state
-        )
+    def __init__(self, **kwargs):
+        self.model = RandomForestClassifier(**kwargs)
         self.feature_importance = None
 
     def train(self, X_train, y_train):
@@ -41,5 +37,6 @@ class RandomForestModel:
     def load(cls, filepath):
         with open(filepath, 'rb') as f:
             return pickle.load(f)
+
 
     
