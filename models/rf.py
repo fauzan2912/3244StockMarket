@@ -6,6 +6,7 @@ class RandomForestModel:
     def __init__(self, **kwargs):
         self.model = RandomForestClassifier(**kwargs)
         self.feature_importance = None
+        self.scaler = None
         self.params = kwargs  
 
     def train(self, X_train, y_train):
