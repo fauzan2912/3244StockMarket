@@ -192,9 +192,39 @@ def train_model_for_stock(stock_symbol, model_type, start_date=None, end_date=No
         }
     
     elif model_type == 'rf':
-        # Add code for Random Forest model training
-        print(f"\n--- Random Forest training not yet implemented for {stock_symbol} ---")
-        return None
+        print(f"\n--- Training Random Forest for {stock_symbol} ---")
+
+        # Tune hyperparameters
+        results, best_sklearn_model = tune_random_forest(X_train, y_train, X_test, y_test)
+
+        # Wrap into custom model
+        model = RandomForestModel()
+        model.model = best_sklearn_model
+        model.feature_importance = best_sklearn_model.feature_importances_
+
+        # Print top 10 important features
+        importance_df = model.get_feature_importance(feature_cols)
+        print(f"\nTop 10 most important features for {stock_symbol}:")
+        print(importance_df.head(10))
+
+        # Save model
+        os.makedirs("models", exist_ok=True)
+        model_path = os.path.join("models", f"{stock_symbol}_rf_model.pkl")
+        model.save(model_path)
+
+        # Return metadata
+        return {
+            'stock': stock_symbol,
+            'model_type': 'rf',
+            'train_samples': len(X_train),
+            'test_samples': len(X_test),
+            'feature_count': len(feature_cols),
+            'model_path': model_path,
+            'training_score': model.model.score(X_train, y_train),
+            'test_score': model.model.score(X_test, y_test),
+            'f1_score': results["f1_score"],
+            'best_params': results["best_params"]
+        }
     
     elif model_type == 'xgb':
         # Add code for XGBoost model training
