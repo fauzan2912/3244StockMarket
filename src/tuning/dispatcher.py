@@ -9,7 +9,7 @@ def tune_model_dispatcher(model_type, X_train, y_train, X_val, y_val, val_return
         return tune_svm(X_train, y_train, X_val, y_val, val_returns)
     # elif model_type == 'logistic':
         # return tune_logistic(X_train, y_train, X_val, y_val, val_returns)
-    # elif model_type == 'rf':
-        # return tune_random_forest(X_train, y_train, X_val, y_val, val_returns)
+    elif model_type == 'rf':
+        return tune_random_forest(X_train, y_train, X_val, y_val, val_returns)
     else:
         raise ValueError(f"No tuner implemented for model type: {model_type}")
