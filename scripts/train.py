@@ -14,9 +14,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models
 from src.models.model_logistic import LogisticModel
+from src.models.model_random_forest import RandomForestModel
 
 # Import data loader
 from src.data_loader import get_stocks, get_technical_indicators
+
+
 
 def prepare_data_for_stock(stock_symbol, start_date=None, end_date=None, test_size=0.2, random_state=42):
     """
@@ -190,29 +193,47 @@ def train_model_for_stock(stock_symbol, model_type, start_date=None, end_date=No
             'model_path': model_path,
             'training_accuracy': model.model.score(X_train, y_train)
         }
-    
     elif model_type == 'rf':
         print(f"\n--- Training Random Forest for {stock_symbol} ---")
 
-        # Hyperparamter tuning
-        results, best_sklearn_model = tune_random_forest(X_train, y_train, X_test, y_test)
+        # Step 1: Locate config files
+        stock_config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "config", f"{stock_symbol}_rf_params.json"
+        )
 
-        # Wrap into custom model
-        model = RandomForestModel()
-        model.model = best_sklearn_model
-        model.feature_importance = best_sklearn_model.feature_importances_
+        # Step 2: Load model based on config availability
+        if os.path.exists(stock_config_path):
+            print(f"--- Found stock-specific configuration file at {stock_config_path}")
+            with open(stock_config_path, 'r') as f:
+                rf_params = json.load(f)
+            model = RandomForestModel(**rf_params)
+        elif config_path and os.path.exists(config_path):
+            print(f"--- Found global configuration file at {config_path}")
+            with open(config_path, 'r') as f:
+                rf_params = json.load(f)
+            model = RandomForestModel(**rf_params)
+        else:
+            print("--- No configuration file found. Using default parameters.")
+            rf_params = {
+                "n_estimators": 100,
+                "max_depth": None,
+                "random_state": 42
+            }
+            model = RandomForestModel(**rf_params)
 
-        # Print top 10 important features
+        # Step 3: Train model
+        model.train(X_train, y_train)
+
+        # Step 4: Feature importance
         importance_df = model.get_feature_importance(feature_cols)
         print(f"\nTop 10 most important features for {stock_symbol}:")
         print(importance_df.head(10))
 
-        # Save model
-        os.makedirs("models", exist_ok=True)
-        model_path = os.path.join("models", f"{stock_symbol}_rf_model.pkl")
-        model.save(model_path)
+        # Step 5: Save model
+        model_path = save_model(model, "rf", stock_symbol)
 
-        # Return metadata
+        # Step 6: Return model metadata
         return {
             'stock': stock_symbol,
             'model_type': 'rf',
@@ -222,10 +243,9 @@ def train_model_for_stock(stock_symbol, model_type, start_date=None, end_date=No
             'model_path': model_path,
             'training_score': model.model.score(X_train, y_train),
             'test_score': model.model.score(X_test, y_test),
-            'f1_score': results["f1_score"],
-            'best_params': results["best_params"]
+            'best_params': rf_params
         }
-    
+
     elif model_type == 'xgb':
         # Add code for XGBoost model training
         print(f"\n--- XGBoost training not yet implemented for {stock_symbol} ---")
