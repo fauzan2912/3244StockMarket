@@ -36,6 +36,7 @@ def get_technical_indicators(df):
     df['BOLL_Std'] = df['Close'].rolling(window=20).std()
     df['BOLL_Upper'] = df['BOLL_Mid'] + 2 * df['BOLL_Std']
     df['BOLL_Lower'] = df['BOLL_Mid'] - 2 * df['BOLL_Std']
+    df['BOLL_Width'] = df['BOLL_Upper'] - df['BOLL_Lower']
 
     # === Momentum features ===
     df['Momentum_1D'] = df['Close'].diff(1)
@@ -47,7 +48,27 @@ def get_technical_indicators(df):
     df['High/Low'] = df['High'] / df['Low']
 
     # === Lag Features ===
-    df['Close_Lag1'] = df['Close'].shift(1)
+    for lag in [1, 2, 3, 5, 10]:
+        df[f'Close_Lag{lag}'] = df['Close'].shift(lag)
+
+    # === Rolling Averages ===
+    df['RollingMean_5'] = df['Close'].rolling(window=5).mean()
+    df['RollingStd_5'] = df['Close'].rolling(window=5).std()
+    df['RollingMax_10'] = df['Close'].rolling(10).max()
+    df['RollingMin_10'] = df['Close'].rolling(10).min()
+
+    df['FutureReturn_5D'] = df['Close'].pct_change(periods=5).shift(-5)
+
+    # === Volatility  ===
+    df['Volatility_5'] = df['Close'].rolling(window=5).std()
+    df['Volatility_10'] = df['Close'].rolling(window=10).std()
+
+    df['High_Low'] = df['High'] - df['Low']
+    df['High_Close'] = np.abs(df['High'] - df['Close'].shift(1))
+    df['Low_Close'] = np.abs(df['Low'] - df['Close'].shift(1))
+    df['TrueRange'] = df[['High_Low', 'High_Close', 'Low_Close']].max(axis=1)
+    df['ATR_14'] = df['TrueRange'].rolling(window=14).mean()
+
 
     # === Standardize selected features ===
     scale_cols = ['Momentum_1D', 'Momentum_3D', 'Momentum_7D', 'Close_Lag1']
