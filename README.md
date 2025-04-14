@@ -128,7 +128,3 @@ It compares:
 ## 👨‍💻 Authors
 
 This pipeline was built as part of a CS3244 Machine Learning project focused on real-world financial forecasting.
-
-```
-
----
