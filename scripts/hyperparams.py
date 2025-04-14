@@ -9,9 +9,9 @@ import pickle
 from datetime import datetime
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import make_scorer, accuracy_score, f1_score
+from sklearn.metrics import make_scorer, accuracy_score, f1_score, classification_report
 import xgboost as xgb
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import data loader
 from src.data_loader import get_stocks, get_technical_indicators
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
-from 
+
 
 # Define custom scorer for Sharpe ratio
 def sharpe_ratio_scorer(y_true, y_pred, returns):
@@ -186,10 +186,9 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
     
     Args:
         X_train: Training features
-        y_train: Training target
+        y_train: Binary training labels (0: loss, 1: gain)
         X_test: Testing features
-        y_test: Testing target
-        test_returns: Returns for the test set
+        y_test: Binary testing labels
         
     Returns:
         Dictionary with best parameters and results
@@ -203,14 +202,15 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
         'min_samples_split': [2, 5, 10],
         'min_samples_leaf': [1, 2, 4],
         'bootstrap': [True, False],
+        'class_weight': [None, 'balanced'],
         'random_state': [42]
     }
     
     # Define the model
-    rf = RandomForestRegressor()
+    rf = RandomForestClassifier()
     
-    # Create custom scorer that uses test returns for Sharpe ratio
-    scorer = make_scorer(r2_score)
+    # Use F1 score for classification tasks
+    scorer = make_scorer(f1_score)
 
     random_search = RandomizedSearchCV(
         estimator=rf,
@@ -222,44 +222,43 @@ def tune_random_forest(X_train, y_train, X_test, y_test, test_returns):
         verbose=1,
         random_state=42
     )
-    
+        
     # Fit randomized search
     random_search.fit(X_train, y_train)
     
-    # Get best parameters
+    # Best params
     best_params = random_search.best_params_
     
-    # Train model with best parameters
-    best_model = RandomForestRegressor(**best_params)
+    # Train model with best params
+    best_model = RandomForestClassifier(**best_params)
     best_model.fit(X_train, y_train)
     
-    # Make predictions on test set
+    # Predict on test set
     y_pred = best_model.predict(X_test)
     
-    # Calculate r2 score
-    r2 = r2_score(y_test, y_pred)
+    # Evaluation metrics
+    accuracy = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
     
-    # Calculate Sharpe ratio
-    strategy_returns = calculate_returns(y_pred, test_returns)
-    sharpe = calculate_sharpe_ratio(strategy_returns)
+    print(f"--- Best Parameters: {best_params}")
+    print(f"--- Accuracy on Test Set: {accuracy:.4f}")
+    print(f"--- F1 Score on Test Set: {f1:.4f}")
     
-    # Create results dictionary
+    print("--- Classification Report ---")
+    print(classification_report(y_test, y_pred))
+    
     results = {
         'best_params': best_params,
-        'r2 score': r2,
-        'sharpe_ratio': sharpe,
+        'accuracy': accuracy,
+        'f1_score': f1,
         'cv_results': {
             'mean_test_score': random_search.cv_results_['mean_test_score'].tolist(),
             'params': [str(p) for p in random_search.cv_results_['params']]
         }
     }
     
-    print(f"--- Best Parameters: {best_params}")
-    print(f"--- R² Score on Test Set: {r2:.4f}")
-    print(f"--- Sharpe Ratio: {sharpe:.4f}")
-    
     return results, best_model
-    
+
 
 def tune_xgboost(X_train, y_train, X_test, y_test, test_returns):
     """
