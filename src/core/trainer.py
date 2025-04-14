@@ -13,34 +13,43 @@ from src.utils.io import save_model, save_feature_cols
 
 def train_model(model_type, stock_symbol, train_df, save=True, meta=None):
     """
-    Train a model using hyperparameter tuning and optionally save it.
-
-    Args:
-        model_type: str - 'svm', 'logistic', etc.
-        stock_symbol: str - 'AAPL'
-        train_df: DataFrame with features + Target
-        save: bool - whether to save the model and features
-        meta: tuple - (test_start_date, 'rolling'/'expanding')
+    Tune and train a model on the training window.
 
     Returns:
-        best_model, feature_cols
+        - best model (with scaler and .params)
+        - feature column list
     """
     feature_cols = [col for col in train_df.columns if col not in ['Stock', 'Date', 'Target', 'Returns']]
     X = train_df[feature_cols].values
     y = train_df['Target'].values
 
-    # Split for validation
+    # Validation split (time-order preserved)
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, shuffle=False)
     val_returns = train_df['Returns'].iloc[-len(y_val):].values
 
-    # Tune model
-    results, model_with_scaler = tune_model_dispatcher(model_type, X_train, y_train, X_val, y_val, val_returns)
-    model = model_with_scaler['model']
+    # Call tuning
+    best_params_dict, model_dict = tune_model_dispatcher(
+        model_type,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        val_returns
+    )
 
-    # Save using tagged suffix
+    # Extract inner param dict
+    tuned_params = best_params_dict["best_params"]
+
+    # Create model object with params
+    model_obj = get_model(model_type, **tuned_params)
+    model_obj.model = model_dict["model"]
+    model_obj.scaler = model_dict["scaler"]
+
+
     if save:
         suffix = f"{meta[0].strftime('%Y-%m')}_{meta[1]}" if meta else "tuned"
-        save_model(model, model_type, stock_symbol, suffix=suffix)
+        save_model(model_obj, model_type, stock_symbol, suffix=suffix)
         save_feature_cols(feature_cols, stock_symbol, model_type, suffix=suffix)
 
-    return model, feature_cols
+    return model_obj, feature_cols
+
