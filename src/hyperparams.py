@@ -17,7 +17,7 @@ from sklearn.ensemble import RandomForestClassifier
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import data loader
-from src.data_loader import get_stocks, get_technical_indicators
+from data_loader import get_stocks, get_technical_indicators
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
 
 

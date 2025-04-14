@@ -13,7 +13,7 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import data loader
-from src.data_loader import get_stocks, get_technical_indicators
+from data_loader import get_stocks, get_technical_indicators
 
 # Import evaluation modules
 from evaluation.metrics import evaluate_trading_strategy
@@ -260,7 +260,7 @@ def main():
     
     if not args.stocks:
         print("--- No stocks specified. Using default stocks.")
-        args.stocks = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+        args.stocks = ["BAC","AAPL","GE", "F", "MSFT", "SIRI", "INTC", "CSCO", "PFE", "HPQ"] # Top 10 median trading volume
     
     # Determine which models to evaluate
     model_types = []

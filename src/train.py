@@ -13,11 +13,11 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models
-from src.models.model_logistic import LogisticModel
-from src.models.model_random_forest import RandomForestModel
+from models.model_logistic import LogisticModel
+from models.model_random_forest import RandomForestModel
 
 # Import data loader
-from src.data_loader import get_stocks, get_technical_indicators
+from data_loader import get_stocks, get_technical_indicators
 
 
 
