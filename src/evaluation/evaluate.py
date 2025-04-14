@@ -136,9 +136,15 @@ def evaluate_model_for_stock(stock_symbol, model_type, start_date=None, end_date
         Dictionary with evaluation metrics
     """
     # Prepare data for this stock
-    X_test, y_test, test_dates, test_returns = prepare_data_for_stock(
+    if (model_type == "lstm"):
+        X_test, y_test, test_dates, test_returns = prepare_data_for_stock(
         stock_symbol, start_date, end_date, test_size
-    )
+        )
+        y_test, test_dates, test_returns = y_test[90:], test_dates[90:], test_returns[90:]
+    else:
+        X_test, y_test, test_dates, test_returns = prepare_data_for_stock(
+            stock_symbol, start_date, end_date, test_size
+        )
     
     if X_test is None:
         return None
