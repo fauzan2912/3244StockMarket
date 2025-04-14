@@ -63,12 +63,12 @@ The pipeline uses a hierarchical structure to organize models and results by bot
 
 ## Usage
 
-The main entry point is `scripts/run.py`, which orchestrates the entire pipeline.
+The main entry point is `src/run.py`, which orchestrates the entire pipeline.
 
 ### Basic Command Structure
 
 ```bash
-python scripts/run.py --mode [mode] --model [model_type] --stocks [stock_symbols] [options]
+python src/run.py --mode [mode] --model [model_type] --stocks [stock_symbols] [options]
 ```
 
 ### Mode Options
@@ -91,7 +91,7 @@ python scripts/run.py --mode [mode] --model [model_type] --stocks [stock_symbols
 
 You can specify one or more stock symbols:
 ```bash
-python scripts/run.py --stocks AAPL MSFT GOOGL
+python src/run.py --stocks AAPL MSFT GOOGL
 ```
 
 ### Date Range Options
@@ -100,12 +100,12 @@ You can filter data by date range in three ways:
 
 1. Specific year:
 ```bash
-python scripts/run.py --year 2016
+python src/run.py --year 2016
 ```
 
 2. Custom date range:
 ```bash
-python scripts/run.py --start_date 2016-01-01 --end_date 2016-12-31
+python src/run.py --start_date 2016-01-01 --end_date 2016-12-31
 ```
 
 3. Default: Uses all available data
@@ -114,7 +114,7 @@ python scripts/run.py --start_date 2016-01-01 --end_date 2016-12-31
 
 You can specify the proportion of data to use for testing:
 ```bash
-python scripts/run.py --test_size 0.3
+python src/run.py --test_size 0.3
 ```
 
 ## Examples
@@ -122,37 +122,37 @@ python scripts/run.py --test_size 0.3
 ### Train and Evaluate a Logistic Regression Model for Apple in 2016
 
 ```bash
-python scripts/run.py --mode all --model logistic --stocks AAPL --year 2016
+python src/run.py --mode all --model logistic --stocks AAPL --year 2016
 ```
 
 ### Tune Hyperparameters for XGBoost Models for Multiple Stocks
 
 ```bash
-python scripts/run.py --mode tune --model xgb --stocks AAPL MSFT GOOGL AMZN
+python src/run.py --mode tune --model xgb --stocks AAPL MSFT GOOGL AMZN
 ```
 
 ### Train Models for All Stock Types
 
 ```bash
-python scripts/run.py --mode train --model all --stocks AAPL MSFT GOOGL
+python src/run.py --mode train --model all --stocks AAPL MSFT GOOGL
 ```
 
 ### Train Models for Multiple Stocks in a Custom Date Range
 
 ```bash
-python scripts/run.py --mode train --model logistic --stocks AAPL MSFT --start_date 2018-01-01 --end_date 2019-12-31
+python src/run.py --mode train --model logistic --stocks AAPL MSFT --start_date 2018-01-01 --end_date 2019-12-31
 ```
 
 ### Evaluate Previously Trained Models
 
 ```bash
-python scripts/run.py --mode evaluate --model all
+python src/run.py --mode evaluate --model all
 ```
 
 ### Train and Evaluate One Model Type for All Stocks in Dataset
 
 ```bash
-python scripts/run.py --mode all --model logistic
+python src/run.py --mode all --model logistic
 ```
 
 ## Trading Strategy
