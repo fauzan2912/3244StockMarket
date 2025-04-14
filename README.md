@@ -1,191 +1,134 @@
-# Stock Market Prediction Pipeline
+# 🧠 Stock Market Forecasting Pipeline
 
-This pipeline allows you to train and evaluate machine learning models to predict stock price movements and implement trading strategies (long/short positions) based on those predictions.
+This project implements a **rolling vs expanding window forecasting pipeline** for stock price prediction using machine learning models (e.g., SVM, Logistic Regression, Random Forest).
 
-## Features
+## 📌 Features
 
-- Train individual models for each stock
-- Support for multiple model types (Logistic Regression, Random Forest, XGBoost, LSTM)
-- Date range filtering for specific time periods
-- Automatic calculation of technical indicators
-- Trading strategy evaluation with performance metrics
-- Visualization of results
+- ✅ Yearly rolling & expanding window strategy
+- ✅ Per-window hyperparameter tuning using validation splits
+- ✅ Buy & Hold benchmark included
+- ✅ Final cumulative performance plot (Rolling vs Expanding vs Buy & Hold)
+- ✅ Per-window evaluation metrics (Sharpe, return, drawdown)
+- ✅ Full CSV metrics summary per stock
 
-## Installation
+---
 
-1. Clone the repository:
+## 🛠 Project Setup
+
+### 1. Clone the project
 ```bash
-git clone https://github.com/yourusername/3244StockMarket.git
+git clone <your-repo-url>
 cd 3244StockMarket
 ```
 
-2. Install required dependencies:
+### 2. Install requirements
 ```bash
 pip install -r requirements.txt
 ```
 
-## Directory Structure
+### 3. First-time run will auto-download Kaggle dataset:
+- [`borismarjanovic/price-volume-data-for-all-us-stocks-etfs`](https://www.kaggle.com/datasets/borismarjanovic/price-volume-data-for-all-us-stocks-etfs)
+- Data is cached and cleaned to form `stocks.pkl`
 
-The pipeline uses a hierarchical structure to organize models and results by both stock and model type:
+---
 
-```
-3244STOCKMARKET/
-├── models/
-│   ├── AAPL/                  # Stock-specific folder
-│   │   ├── feature_cols.pkl   # Features for this stock
-│   │   ├── logistic/          # Model-specific subfolder
-│   │   │   └── model.pkl      # The logistic model for AAPL
-│   │   ├── rf/                # Another model type
-│   │   │   └── model.pkl
-│   │   └── xgb/               # Another model type
-│   │       └── model.pkl
-│   ├── MSFT/                  # Another stock
-│   │   └── ...
-│   └── training_info.pkl      # Overall training info
-├── results/
-│   ├── AAPL/                  # Stock-specific results
-│   │   ├── logistic/          # Model-specific results
-│   │   │   ├── confusion_matrix.png
-│   │   │   ├── cumulative_returns.png
-│   │   │   └── metrics.json
-│   │   ├── rf/
-│   │   └── xgb/
-│   ├── MSFT/
-│   │   └── ...
-│   └── logistic_metrics.csv   # Summary metrics across stocks
-└── config/
-    ├── AAPL/                  # Stock-specific configs
-    │   ├── logistic/
-    │   │   └── params.json
-    │   └── ...
-    └── MSFT/
-```
+## 🚀 Usage
 
-## Usage
-
-The main entry point is `src/run.py`, which orchestrates the entire pipeline.
-
-### Basic Command Structure
-
+### Run the pipeline:
 ```bash
-python src/run.py --mode [mode] --model [model_type] --stocks [stock_symbols] [options]
+python main.py --stocks AAPL --model svm --start_date 2010-01-01 --end_date 2017-12-31
 ```
 
-### Mode Options
+### Required Arguments:
+| Argument       | Description                                |
+|----------------|--------------------------------------------|
+| `--stocks`     | One or more stock tickers (e.g. `AAPL`)    |
+| `--model`      | Model to use: `svm`, `logistic`, `rf`      |
+| `--start_date` | Start date of your dataset window          |
+| `--end_date`   | End date of your dataset window            |
 
-- `train`: Only train models
-- `tune`: Only tune hyperparameters
-- `evaluate`: Only evaluate models
-- `all`: Run the full pipeline (tune, train, evaluate)
+---
 
-### Model Options
+## 📁 Output Directory: `results/{stock}/`
 
-- `logistic`: Logistic Regression
-- `rf`: Random Forest
-- `xgb`: XGBoost
-- `lstm`: LSTM Neural Network
-- `attention`: Attention-based LSTM
-- `all`: Use all model types
-
-### Stock Selection
-
-You can specify one or more stock symbols:
-```bash
-python src/run.py --stocks AAPL MSFT GOOGL
+Each stock’s results are saved in a dedicated folder:
+```
+results/
+└── AAPL/
+    ├── model_2012-01_rolling.pkl
+    ├── features_2012-01_rolling.pkl
+    ├── metrics_2012-01_rolling.json
+    ├── metrics_2012-01_expanding.json
+    ├── AAPL_svm_full_comparison.png      ← Final performance chart
+    └── AAPL_svm_metrics_summary.csv      ← All metrics across windows
 ```
 
-### Date Range Options
+---
 
-You can filter data by date range in three ways:
+## 🔍 Strategy Details
 
-1. Specific year:
-```bash
-python src/run.py --year 2016
+### Rolling Window
+- Train on a **fixed 1-year window**
+- Predict the following **1-year**
+- Window slides forward 1 year at a time
+
+### Expanding Window
+- Train from `start_date` up to the current test period
+- Predict on 1-year ahead
+
+### Evaluation Metrics
+- ✅ Cumulative Return
+- ✅ Sharpe Ratio
+- ✅ Max Drawdown
+- ✅ Win Rate
+- ✅ Total Trades
+
+---
+
+## ⚙️ Models
+
+| Model Type | Description |
+|------------|-------------|
+| `svm`      | Scikit-learn SVC with tuning over C, kernel, gamma |
+| `logistic` | Logistic Regression with L2 penalty tuning |
+| `rf`       | Random Forest with n_estimators, depth, and sampling tuning |
+
+---
+
+## 📊 Plot
+
+Final result is saved as:
+```
+results/{stock}/{stock}_{model}_full_comparison.png
 ```
 
-2. Custom date range:
-```bash
-python src/run.py --start_date 2016-01-01 --end_date 2016-12-31
+It compares:
+- 🔵 Rolling strategy
+- 🟢 Expanding strategy
+- ⚫ Buy & Hold benchmark
+
+---
+
+## 📌 Notes
+
+- Models are tuned per-window using a time-respecting 80/20 split
+- Metrics are stored per window and summarized in a CSV
+- No "latest" suffixes are used — all files are clearly versioned
+
+---
+
+## 🧼 Optional Enhancements
+
+- Add new models to `models/` and register in `model_factory.py`
+- Customize technical indicators in `processor.py`
+- Add multi-stock cross-analysis in `results/summary/`
+
+---
+
+## 👨‍💻 Authors
+
+This pipeline was built as part of a CS3244 Machine Learning project focused on real-world financial forecasting.
+
 ```
 
-3. Default: Uses all available data
-
-### Test Size Option
-
-You can specify the proportion of data to use for testing:
-```bash
-python src/run.py --test_size 0.3
-```
-
-## Examples
-
-### Train and Evaluate a Logistic Regression Model for Apple in 2016
-
-```bash
-python src/run.py --mode all --model logistic --stocks AAPL --year 2016
-```
-
-### Tune Hyperparameters for XGBoost Models for Multiple Stocks
-
-```bash
-python src/run.py --mode tune --model xgb --stocks AAPL MSFT GOOGL AMZN
-```
-
-### Train Models for All Stock Types
-
-```bash
-python src/run.py --mode train --model all --stocks AAPL MSFT GOOGL
-```
-
-### Train Models for Multiple Stocks in a Custom Date Range
-
-```bash
-python src/run.py --mode train --model logistic --stocks AAPL MSFT --start_date 2018-01-01 --end_date 2019-12-31
-```
-
-### Evaluate Previously Trained Models
-
-```bash
-python src/run.py --mode evaluate --model all
-```
-
-### Train and Evaluate One Model Type for All Stocks in Dataset
-
-```bash
-python src/run.py --mode all --model logistic
-```
-
-## Trading Strategy
-
-For each model, the pipeline implements a simple trading strategy:
-- If predicted return is positive → Take LONG position
-- If predicted return is negative → Take SHORT position
-
-Performance is measured based on cumulative returns and Sharpe ratio.
-
-## Performance Metrics
-
-The pipeline evaluates trading strategy performance using several metrics:
-
-- **Cumulative Return**: Total return over the testing period
-- **Annualized Return**: Annualized version of the cumulative return
-- **Sharpe Ratio**: Risk-adjusted return (higher is better)
-- **Maximum Drawdown**: Largest peak-to-trough decline (smaller is better)
-- **Win Rate**: Percentage of trades that are profitable
-
-## Extending the Pipeline
-
-You can extend the pipeline by:
-1. Adding new model types in the `src/models/` directory
-2. Implementing new technical indicators in `src/data_loader.py`
-3. Adding new evaluation metrics in `evaluation/metrics.py`
-
-## Tips for Best Results
-
-1. Train models on specific stocks rather than combining data from multiple stocks
-2. Use sufficient historical data to capture market cycles
-3. Ensure your test set represents a realistic trading period
-4. Compare multiple model types to find the best performer for each stock
-5. Pay attention to the Sharpe ratio, not just raw returns
-6. For hyperparameter tuning, use multiple years of data when possible
-7. Consider different time periods for different market conditions (bull/bear markets)
+---
