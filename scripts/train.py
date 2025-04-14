@@ -194,7 +194,7 @@ def train_model_for_stock(stock_symbol, model_type, start_date=None, end_date=No
     elif model_type == 'rf':
         print(f"\n--- Training Random Forest for {stock_symbol} ---")
 
-        # Tune hyperparameters
+        # Hyperparamter tuning
         results, best_sklearn_model = tune_random_forest(X_train, y_train, X_test, y_test)
 
         # Wrap into custom model
