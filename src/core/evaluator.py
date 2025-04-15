@@ -10,7 +10,7 @@ from evaluation.metrics import evaluate_trading_strategy
 from src.utils.io import save_metrics, load_model, load_feature_cols
 import pandas as pd
 
-def evaluate_model(model, feature_cols, stock_symbol, test_df, window_id, return_preds=False):
+def evaluate_model(model_type, model, feature_cols, stock_symbol, test_df, window_id, return_preds=False):
     """
     Evaluate a model on test data and optionally return predictions.
     """
@@ -24,7 +24,10 @@ def evaluate_model(model, feature_cols, stock_symbol, test_df, window_id, return
     test_dates = test_df['Date'].values
 
     preds = model.predict(X_test)
-    metrics, strategy_returns = evaluate_trading_strategy(preds, test_returns, test_dates)
+    if (model_type == 'lstm'):
+        metrics, strategy_returns = evaluate_trading_strategy(preds, test_returns[model.seq_length:], test_dates[model.seq_length:])
+    else:
+        metrics, strategy_returns = evaluate_trading_strategy(preds, test_returns, test_dates)
 
     print(f"[{stock_symbol} - {window_id}] Sharpe: {metrics['sharpe_ratio']:.3f}, Return: {metrics['cumulative_return']:.2%}")
     save_metrics(stock_symbol, metrics, suffix=window_id)
