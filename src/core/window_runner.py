@@ -91,7 +91,7 @@ def run_rolling_strategy(args):
         save_combined_metrics_csv(stock, args.model, all_window_metrics)
 
         if (args.model == 'lstm'):
-            break;
+            continue;
         plot_comparison_cumulative_returns(
             rolling_preds=full_preds['rolling'],
             expanding_preds=full_preds['expanding'],
