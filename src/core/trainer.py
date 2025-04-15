@@ -42,8 +42,13 @@ def train_model(model_type, stock_symbol, train_df, save=True, meta=None):
 
     # Create model object with params
     model_obj = get_model(model_type, **tuned_params)
-    model_obj.model = model_dict["model"]
-    model_obj.scaler = model_dict["scaler"]
+    if model_type == "rf":
+        model_obj.model = model_dict
+        model_obj.scaler = None
+    else:
+        model_obj.model = model_dict["model"]
+        model_obj.scaler = model_dict["scaler"]
+
 
 
     if save:
