@@ -1,8 +1,8 @@
 {
-    "cumulative_return": 0.4941697135054961,
-    "annualized_return": 0.5586830633313535,
-    "sharpe_ratio": 2.4302741435382713,
-    "max_drawdown": -0.07362660736781652,
-    "win_rate": 0.5526315789473685,
-    "total_trades": 228
+    "cumulative_return": -0.2604097562785096,
+    "annualized_return": -0.2604097562785096,
+    "sharpe_ratio": -1.43652584506354,
+    "max_drawdown": -0.32948750832346446,
+    "win_rate": 0.43253968253968256,
+    "total_trades": 252
 }
