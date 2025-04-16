@@ -5,28 +5,19 @@ from sklearn.preprocessing import StandardScaler
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
 from models.lstm import LstmModel
 from functools import partial
+from keras import backend as K
+import gc
 
 def sequence_accuracy_score(y_true, y_pred, seq_length):
     """Calculate accuracy for sequence-based predictions"""
     # Compare only the predictable targets
     return accuracy_score(y_true[seq_length:], y_pred)
 
-def get_sequences(X, y, seq_length):
-    """
-    Create properly aligned sequences where:
-    - Each X sequence contains seq_length past observations
-    - Each y sequence contains corresponding targets
-    - Both have exactly the same length
-    """
-    X_seq, y_seq = [], []
-    for i in range(seq_length, len(X)):
-            X_seq.append(X[i-seq_length:i])  # Past seq_length observations
-            y_seq.append(y[i])   # Corresponding targets
-    return np.array(X_seq).astype('float32'), np.array(y_seq).astype('float32')
         
 def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
     print("[TUNING] LSTM")
     # print(f'[DEBUG] len(X_train): {len(X_train)}, len(X_val): {len(X_val)}')
+    
     val_size = len(X_val)
     if (val_size < 50):
         seq_length_grid = [10, 20]
@@ -94,7 +85,11 @@ def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
             best_score = score
             best_sharpe = calculate_sharpe_ratio(calculate_returns(y_pred, val_returns[seq_length:]))
             best_params = cur_best_params
-            best_model = cur_best_model 
+            best_model = cur_best_model
+
+        # gpu set up
+        gc.collect()
+        K.clear_session()
 
     return {
         'best_params': best_params,
