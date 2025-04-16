@@ -5,6 +5,8 @@ from sklearn.preprocessing import StandardScaler
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
 from models.lstm import LstmModel
 from functools import partial
+from keras import backend as K
+import gc
 
 def sequence_accuracy_score(y_true, y_pred, seq_length):
     """Calculate accuracy for sequence-based predictions"""
@@ -83,7 +85,11 @@ def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
             best_score = score
             best_sharpe = calculate_sharpe_ratio(calculate_returns(y_pred, val_returns[seq_length:]))
             best_params = cur_best_params
-            best_model = cur_best_model 
+            best_model = cur_best_model
+
+        # gpu set up
+        gc.collect()
+        K.clear_session()
 
     return {
         'best_params': best_params,
