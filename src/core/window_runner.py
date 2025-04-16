@@ -4,6 +4,7 @@ import os
 import sys
 import csv
 import pandas as pd
+import numpy as np
 from dateutil.relativedelta import relativedelta
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -18,13 +19,14 @@ def generate_yearly_ranges(start_date, end_date, window_years=1, expanding=False
     start = pd.to_datetime(start_date)
     end = pd.to_datetime(end_date)
     ranges = []
+
     test_start = start + relativedelta(years=window_years)
 
     while True:
         train_start = start if expanding else test_start - relativedelta(years=window_years)
         train_end = test_start - relativedelta(days=1)
         test_end = test_start + relativedelta(years=1) - relativedelta(days=1)
-
+            
         if test_end > end:
             break
 
@@ -79,6 +81,14 @@ def run_rolling_strategy(args):
             metrics_e, _, preds_e = evaluate_model(args.model, model_exp, features, stock, test_df, return_preds=True, window_id=f"{test_start.strftime('%Y-%m')}_expanding")
 
 
+            if (args.model == 'lstm'):
+                # print('[DEBUG] padding')
+                pad_r = len(test_df['Returns'].tolist()) - len(preds_r)
+                pad_e = len(test_df['Returns'].tolist()) - len(preds_e)
+                preds_r = np.pad(preds_r, (pad_r, 0), 'constant', constant_values=0)
+                preds_e = np.pad(preds_e, (pad_e, 0), 'constant', constant_values=0)
+                # print(f'[DEBUG] length: preds_r {len(preds_r)}, preds_e {len(preds_e)}, returns {len(test_df['Returns'].tolist())}, dates {len(test_df['Date'].tolist())}')
+            
             full_preds['rolling'].extend(preds_r)
             full_preds['expanding'].extend(preds_e)
             full_preds['returns'].extend(test_df['Returns'].tolist())
@@ -90,8 +100,6 @@ def run_rolling_strategy(args):
 
         save_combined_metrics_csv(stock, args.model, all_window_metrics)
 
-        if (args.model == 'lstm'):
-            continue;
         plot_comparison_cumulative_returns(
             rolling_preds=full_preds['rolling'],
             expanding_preds=full_preds['expanding'],
