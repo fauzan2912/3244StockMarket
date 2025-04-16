@@ -1,38 +1,65 @@
-# src/tuning/lstm.py
+#!/usr/bin/env python3
+import os
+import gc
+import sys
+import numpy as np
+import tensorflow as tf
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
 from scikeras.wrappers import KerasClassifier as _KerasClassifier
-import tensorflow as tf
 from tensorflow.keras import backend as K
-import gc
 
 # Custom wrapper to mark the estimator as a classifier
 class FixedKerasClassifier(_KerasClassifier):
     _estimator_type = "classifier"
 
-def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
-    print("\n--- Tuning LSTM Hyperparameters ---")
+def create_sequences(X, y, seq_length):
+    """
+    Create temporal sequences of length `seq_length`.
+    For each sample i (starting from seq_length), the sequence consists of X[i-seq_length:i],
+    and the corresponding target is y[i].
+    """
+    X_seq, y_seq = [], []
+    for i in range(seq_length, len(X)):
+        X_seq.append(X[i-seq_length:i])
+        y_seq.append(y[i])
+    return np.array(X_seq), np.array(y_seq)
 
-    # Ensure inputs are 3D. If they are 2D, add a time dimension.
+def tune_lstm(X_train, y_train, X_val, y_val, val_returns, seq_length=10):
+    print("\n--- Tuning LSTM Hyperparameters with Temporal Sequences ---")
+
+    # If the inputs are 2D, create temporal sequences using a sliding window.
+    # Otherwise, we assume the data is already sequential (3D)
     if len(X_train.shape) == 2:
-        X_train = X_train.reshape(X_train.shape[0], 1, X_train.shape[1])
-    if len(X_val.shape) == 2:
-        X_val = X_val.reshape(X_val.shape[0], 1, X_val.shape[1])
+        # Scale data first (scaling on 2D is easier)
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_val_scaled = StandardScaler().fit_transform(X_val)  # Alternatively, use same scaler if appropriate
+        # Create sequences using sliding window
+        X_train_seq, y_train_seq = create_sequences(X_train_scaled, y_train, seq_length)
+        X_val_seq, y_val_seq = create_sequences(X_val_scaled, y_val, seq_length)
+    else:
+        # Assume inputs already have temporal information
+        X_train_seq, y_train_seq = X_train, y_train
+        X_val_seq, y_val_seq = X_val, y_val
+        scaler = None
 
-    n_samples, timesteps, n_features = X_train.shape
+    n_samples, timesteps, n_features = X_train_seq.shape
+    print(f"--- Data transformed: {n_samples} training sequences of length {timesteps} with {n_features} features.")
 
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train.reshape(-1, n_features)).reshape(n_samples, timesteps, n_features)
-    X_val_scaled = scaler.transform(X_val.reshape(-1, n_features)).reshape(X_val.shape[0], timesteps, n_features)
+    # For consistency, scale the sequences by reshaping to 2D, applying scaler, then back to 3D
+    # (Only needed if not done already; here we assume scaling was done before sequence creation)
+    # Uncomment below if you need additional scaling:
+    # X_train_seq = scaler.fit_transform(X_train_seq.reshape(-1, n_features)).reshape(X_train_seq.shape)
+    # X_val_seq = scaler.transform(X_val_seq.reshape(-1, n_features)).reshape(X_val_seq.shape)
 
-    # Enable GPU memory growth
+    # Enable GPU memory growth if using GPU
     for gpu in tf.config.list_physical_devices('GPU'):
         tf.config.experimental.set_memory_growth(gpu, True)
 
-    # Model builder using Functional API (avoids input_shape warning)
+    # Model builder using Functional API to avoid input_shape warnings.
     def create_model(lstm_units=50, dropout_rate=0.2, learning_rate=0.001):
         from tensorflow.keras.models import Model
         from tensorflow.keras.layers import Input, LSTM, Dropout, Dense
@@ -49,12 +76,12 @@ def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
 
     clf = FixedKerasClassifier(model=create_model, verbose=0)
 
-    # Use model__ prefix so that scikeras knows these go to the model builder function.
+    # Note the use of the `model__` prefix so scikeras can pass these parameters correctly.
     param_grid = {
         'model__lstm_units': [50, 100],
         'model__dropout_rate': [0.2, 0.5],
         'model__learning_rate': [0.001, 0.0001],
-        'batch_size': [16, 32],  # smaller batch sizes to reduce memory usage
+        'batch_size': [16, 32],
         'epochs': [10, 20]
     }
 
@@ -67,12 +94,12 @@ def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
         n_iter=5,
         scoring='accuracy',
         cv=3,
-        n_jobs=1,  # sequential execution to save GPU memory
+        n_jobs=1,  # Sequential execution to save GPU memory
         verbose=1,
         random_state=42
     )
 
-    search.fit(X_train_scaled, y_train)
+    search.fit(X_train_seq, y_train_seq)
     best_params = search.best_params_
     print("--- Best Parameters:", best_params)
 
@@ -84,15 +111,16 @@ def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
     K.clear_session()
 
     best_model.fit(
-        X_train_scaled,
-        y_train,
+        X_train_seq,
+        y_train_seq,
         epochs=best_params['epochs'],
         batch_size=best_params['batch_size'],
         verbose=0
     )
 
-    y_pred = (best_model.predict(X_val_scaled) > 0.5).astype("int32")
-    accuracy = accuracy_score(y_val, y_pred)
+    y_pred = (best_model.predict(X_val_seq) > 0.5).astype("int32")
+    accuracy = accuracy_score(y_val_seq, y_pred)
+    # Convert predictions to trading signals: e.g., 0 -> -1 (sell/short), 1 -> +1 (buy)
     signals = np.where(y_pred == 0, -1, 1)
     sharpe = calculate_sharpe_ratio(calculate_returns(signals, val_returns))
     print("--- Accuracy:", accuracy)
@@ -107,9 +135,22 @@ def tune_lstm(X_train, y_train, X_val, y_val, val_returns):
         }
     }
 
-    # Ensure that the tuned parameters include the 'input_shape' required by LSTMModel.
+    # Return tuned parameters including the input shape needed by the model.
     tuned_params = best_params.copy()
     tuned_params['input_shape'] = (timesteps, n_features)
     print("Tuned parameters returned:", tuned_params)
     
     return results, {'model': best_model, 'scaler': scaler, 'tuned_params': tuned_params}
+    
+# Example usage:
+if __name__ == "__main__":
+    # Dummy data for testing purposes; replace these with your actual data.
+    X_train_dummy = np.random.rand(200, 20)  # 200 samples, 20 features
+    y_train_dummy = np.random.randint(0, 2, 200)
+    X_val_dummy = np.random.rand(50, 20)
+    y_val_dummy = np.random.randint(0, 2, 50)
+    val_returns_dummy = np.random.rand(50) * 0.02  # dummy returns
+
+    results, tuned = tune_lstm(X_train_dummy, y_train_dummy, X_val_dummy, y_val_dummy, val_returns_dummy, seq_length=10)
+    print("\nFinal tuning results:")
+    print(results)
