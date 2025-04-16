@@ -6,9 +6,6 @@ from sklearn.model_selection import train_test_split
 import gc
 from keras import backend as K
 
-gc.collect()
-K.clear_session()
-
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.append(ROOT_DIR)
 
@@ -32,6 +29,10 @@ def train_model(model_type, stock_symbol, train_df, save=True, meta=None):
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, shuffle=False)
     val_returns = train_df['Returns'].iloc[-len(y_val):].values
 
+    # Clear GPU memory before tuning/training
+    gc.collect()
+    K.clear_session()
+
     # Call tuning
     best_params_dict, model_dict = tune_model_dispatcher(
         model_type,
@@ -46,8 +47,8 @@ def train_model(model_type, stock_symbol, train_df, save=True, meta=None):
     tuned_params = best_params_dict["best_params"]
     tuned_params_clean = {k.replace('model__', ''): v for k, v in tuned_params.items()}
 
-    # Handle input_shape explicitly for LSTM and AttentionLSTM
-    if model_type in ["lstm", "attention_lstm"]:
+    # Handle input_shape explicitly for RNN-based models
+    if model_type in ["lstm", "attention_lstm", "deep_rnn"]:
         timesteps = 1
         n_features = X_train.shape[1]
         input_shape = (timesteps, n_features)
