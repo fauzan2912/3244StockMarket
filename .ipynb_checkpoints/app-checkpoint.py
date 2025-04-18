@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 
-# 1. Configure page
+# 1. Configure pages
 st.set_page_config(
     page_title="Stock Forecasting Dashboard",
     layout="wide",
