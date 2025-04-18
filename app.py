@@ -11,116 +11,135 @@ st.set_page_config(
 )
 
 # -------------------------------
-# 2. Directories
+# 2. Base Directory
 # -------------------------------
-# Use current working directory to locate 'results'
 BASE_DIR = Path.cwd() / "results"
-PKL_BASE_DIR = BASE_DIR / "stocks_code"
 
 # -------------------------------
 # 3. Helper Functions
 # -------------------------------
 @st.cache_data
-def list_models():
-    """List model directories under results/stocks_code/."""
-    if not PKL_BASE_DIR.exists():
-        return []
-    return sorted(d.name for d in PKL_BASE_DIR.iterdir() if d.is_dir())
+func def list_stocks():
+    """List all stock directories under results/."""
+    return sorted(
+        [d.name for d in BASE_DIR.iterdir() if d.is_dir()]
+    )
 
 @st.cache_data
-def list_stocks_for_model(model: str):
-    """Extract stock codes from metrics CSV filenames in a given model directory."""
-    model_dir = PKL_BASE_DIR / model
-    if not model_dir.exists():
+def list_models(stock: str):
+    """List model subdirectories under results/{stock}/."""
+    stock_dir = BASE_DIR / stock
+    if not stock_dir.exists():
         return []
-    files = list(model_dir.glob("*_metrics_summary.csv"))
-    stocks = {f.stem.split("_")[0] for f in files}
-    return sorted(stocks)
+    return sorted(
+        [d.name for d in stock_dir.iterdir() if d.is_dir()]
+    )
 
 @st.cache_data
-def load_metrics_df(model: str, stock: str):
-    """Load the metrics summary CSV for a given model and stock."""
-    model_dir = PKL_BASE_DIR / model
-    files = list(model_dir.glob(f"{stock}_*metrics_summary.csv"))
+def load_metrics_df(stock: str, model: str):
+    """Load metrics summary CSV from results/{stock}/{model}/."""
+    dir_path = BASE_DIR / stock / model
+    pattern = f"{stock}_{model}_metrics_summary.csv"
+    files = list(dir_path.glob(pattern))
     if files:
         return pd.read_csv(files[0])
     return None
 
 @st.cache_data
-def get_chart_path(model: str, stock: str):
-    """Get the performance chart PNG path for a given model and stock."""
-    model_dir = PKL_BASE_DIR / model
-    files = list(model_dir.glob(f"{stock}_*full_comparison.png"))
+def get_chart_path(stock: str, model: str):
+    """Get performance chart PNG path from results/{stock}/{model}/."""
+    dir_path = BASE_DIR / stock / model
+    pattern = f"{stock}_{model}_full_comparison.png"
+    files = list(dir_path.glob(pattern))
     return files[0] if files else None
 
 @st.cache_data
-def list_pickles_for_model_stock(model: str, stock: str):
-    """List all pickle files for a given model and stock."""
-    model_dir = PKL_BASE_DIR / model
-    return sorted(model_dir.glob(f"{stock}_*.pkl")) if model_dir.exists() else []
+def list_pickles(stock: str, model: str):
+    """List all .pkl files under results/{stock}/{model}/."""
+    dir_path = BASE_DIR / stock / model
+    if not dir_path.exists():
+        return []
+    return sorted(dir_path.glob("*.pkl"))
 
 # -------------------------------
 # 4. Sidebar: Filters
 # -------------------------------
 st.sidebar.header("Filters")
 
-# 4a. Select Model
-models = list_models()
-if not models:
-    st.sidebar.error(f"No model directories under {PKL_BASE_DIR}. Run pipeline first.")
-    st.stop()
-model = st.sidebar.selectbox("Select Model", models)
-
-# 4b. Select Stock based on model
-stocks = list_stocks_for_model(model)
+# Stock selection
+stocks = list_stocks()
 if not stocks:
-    st.sidebar.error(f"No metrics files found in {PKL_BASE_DIR/model}. Run pipeline first.")
+    st.sidebar.error(
+        "No stock folders found under results/. Run pipeline first."
+    )
     st.stop()
 stock = st.sidebar.selectbox("Select Stock", stocks)
+
+# Model selection based on stock
+models = list_models(stock)
+if not models:
+    st.sidebar.error(
+        f"No model directories under results/{stock}/. Run pipeline first."
+    )
+    st.stop()
+model = st.sidebar.selectbox("Select Model", models)
 
 # -------------------------------
 # 5. Main Page: Title
 # -------------------------------
-st.title(f"📈 {stock} — {model.upper()} Strategy Dashboard")
+st.title(
+    f"📈 {stock} — {model.upper()} Strategy Dashboard"
+)
 
 # -------------------------------
 # 6. Display Metrics Table
 # -------------------------------
 st.subheader("Per-Window Metrics")
-metrics_df = load_metrics_df(model, stock)
+metrics_df = load_metrics_df(stock, model)
 if metrics_df is not None:
     st.dataframe(metrics_df, use_container_width=True)
 else:
-    st.info(f"No metrics CSV found for {stock} in model {model} under {PKL_BASE_DIR/model}.")
+    st.info(
+        f"Metrics CSV not found at results/{stock}/{model}/."
+    )
 
 # -------------------------------
 # 7. Display Cumulative Performance Chart
 # -------------------------------
 st.subheader("Cumulative Performance Chart")
-chart_path = get_chart_path(model, stock)
+chart_path = get_chart_path(stock, model)
 if chart_path:
     st.image(
         str(chart_path),
-        caption=f"{stock} {model} (Rolling vs Expanding vs Buy & Hold)",
+        caption=(
+            f"{stock} {model} (Rolling vs Expanding vs Buy & Hold)"
+        ),
         use_column_width=True,
     )
 else:
-    st.info(f"No chart PNG found for {stock} in model {model} under {PKL_BASE_DIR/model}.")
+    st.info(
+        f"Chart not found at results/{stock}/{model}/."
+    )
 
 # -------------------------------
-# 8. Download Model Pickle
+# 8. Download Trained Model Pickle
 # -------------------------------
 st.subheader("Download Trained Model Pickle")
-pkl_files = list_pickles_for_model_stock(model, stock)
+pkl_files = list_pickles(stock, model)
 if pkl_files:
-    selected_pkl = st.selectbox("Select Pickle File to Download", [p.name for p in pkl_files])
-    pkl_path = PKL_BASE_DIR / model / selected_pkl
+    selected = st.selectbox(
+        "Select Pickle File to Download",
+        [p.name for p in pkl_files]
+    )
+    pkl_path = BASE_DIR / stock / model / selected
     data = pkl_path.read_bytes()
     st.download_button(
         label="Download Pickle",
         data=data,
-        file_name=selected_pkl,
+        file_name=selected,
         mime="application/octet-stream",
     )
 else:
-    st.info(f"No .pkl files found for {stock} in model {model} under {PKL_BASE_DIR/model}.")
+    st.info(
+        f"No .pkl files found at results/{stock}/{model}/."
+    )
