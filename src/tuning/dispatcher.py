@@ -1,11 +1,11 @@
 # src/core/model_factory.py
 
-from models.svm import SVMModel
-from models.lstm import LSTMModel
-from models.attention_lstm import AttentionLSTMModel
-from models.rf import RandomForestModel
-from models.deep_rnn import DeepRNNModel
-from models.xgboost import XgboostModel
+from src.tuning.svm import tune_svm
+from src.tuning.logistic import tune_logistic
+from src.tuning.rf import tune_random_forest
+from src.tuning.lstm import tune_lstm
+from src.tuning.attention_lstm import tune_attention_lstm
+from src.tuning.deep_rnn import tune_deep_rnn
 
 
 def get_model(model_type: str, **kwargs):
@@ -22,13 +22,13 @@ def get_model(model_type: str, **kwargs):
     Raises:
         ValueError: If model_type is not recognized.
     """
-    model_map = {
-        'svm': SVMModel,
-        'lstm': LSTMModel,
-        'attention_lstm': AttentionLSTMModel,
-        'rf': RandomForestModel,
-        'deep_rnn': DeepRNNModel,
-        'xgboost': XgboostModel,
+    tuning_map = {
+        "svm": tune_svm,
+        "logistic": tune_logistic,
+        "rf": tune_random_forest,
+        "lstm": tune_lstm,
+        "attention_lstm": tune_attention_lstm,
+        "deep_rnn": tune_deep_rnn,
     }
 
     try:

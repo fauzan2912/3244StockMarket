@@ -1,14 +1,14 @@
-# src/tuning/svm.py
+# src/tuning/logistic.py
 
-from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 import numpy as np
 from evaluation.metrics import calculate_sharpe_ratio, calculate_returns
 
-def tune_svm(X_train, y_train, X_val, y_val, val_returns):
-    print("[TUNING] SVM")
+def tune_logistic(X_train, y_train, X_val, y_val, val_returns):
+    print("[TUNING] Logistic Regression")
 
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
@@ -16,14 +16,12 @@ def tune_svm(X_train, y_train, X_val, y_val, val_returns):
 
     param_grid = {
         'C': [0.1, 1, 10],
-        'gamma': ['scale', 'auto', 0.01],
-        'kernel': ['rbf', 'linear'],
-        'class_weight': [None, 'balanced'],
-        'probability': [True]
+        'penalty': ['l2', 'l1', 'elasticnet'],
+        'solver': ['lbfgs', 'liblinear', 'newton-cholesky', 'sag', 'saga']
     }
 
     search = RandomizedSearchCV(
-        estimator=SVC(),
+        estimator=LogisticRegression(),
         param_distributions=param_grid,
         n_iter=10,
         scoring='accuracy',
@@ -34,7 +32,7 @@ def tune_svm(X_train, y_train, X_val, y_val, val_returns):
     search.fit(X_train_scaled, y_train)
     best_params = search.best_params_
 
-    best_model = SVC(**best_params)
+    best_model = LogisticRegression(**best_params)
     best_model.fit(X_train_scaled, y_train)
 
     y_pred = best_model.predict(X_val_scaled)

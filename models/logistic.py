@@ -1,23 +1,23 @@
-# models/svm.py
+# models/logistic.py
 
 import numpy as np
 import pandas as pd
-from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
-class SVMModel:
+class LogisticModel:
     def __init__(self, **kwargs):
         self.params = {
             'C': 1.0,
-            'kernel': 'rbf',
-            'gamma': 'scale',
-            'probability': True,
-            'random_state': 42
+            'max_iter': 500,
+            'random_state': 42,
+            'penalty': 'l2',
+            'solver': 'liblinear'
         }
         self.params.update(kwargs)
-        self.model = SVC(**self.params)
+        self.model = LogisticRegression(**self.params)
         self.scaler = StandardScaler()
-        self.feature_importance = None  # SVM doesn’t have true importance
+        self.feature_importance = None
 
     def train(self, X, y):
         X_scaled = self.scaler.fit_transform(X)
@@ -38,3 +38,6 @@ class SVMModel:
             return pd.DataFrame({'Feature': feature_names, 'Importance': importance}).sort_values(by='Importance', ascending=False)
         else:
             return pd.DataFrame({'Feature': feature_names, 'Importance': 0})
+    
+    def get_params(self):
+        return self.params

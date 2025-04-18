@@ -1,7 +1,8 @@
 # src/core/model_factory.py
 
 from models.svm import SVMModel
-from models.lstm import LstmModel
+from models.logistic import LogisticModel
+from models.lstm import LSTMModel
 from models.attention_lstm import AttentionLSTMModel
 from models.rf import RandomForestModel
 from models.deep_rnn import DeepRNNModel
@@ -23,12 +24,12 @@ def get_model(model_type: str, **kwargs):
         ValueError: If model_type is not recognized.
     """
     model_map = {
-        'svm': SVMModel,
-        'lstm': LstmModel,
-        'attention_lstm': AttentionLSTMModel,
-        'rf': RandomForestModel,
-        'deep_rnn': DeepRNNModel,
-        'xgboost': XgboostModel,
+        "svm": SVMModel,
+        "logistic": LogisticModel,
+        "lstm": LSTMModel,
+        "attention_lstm": AttentionLSTMModel,
+        "rf": RandomForestModel,
+        "deep_rnn": DeepRNNModel,
     }
 
     try:
