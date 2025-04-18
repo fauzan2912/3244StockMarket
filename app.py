@@ -13,7 +13,7 @@ st.set_page_config(
 # -------------------------------
 # 2. Directories
 # -------------------------------
-BASE_DIR = Path("results")
+BASE_DIR = Path(__file__).parent.resolve() / "results"
 PKL_BASE_DIR = BASE_DIR / "stocks_code"
 
 # -------------------------------
