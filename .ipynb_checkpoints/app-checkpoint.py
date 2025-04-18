@@ -19,7 +19,7 @@ BASE_DIR = Path.cwd() / "results"
 # 3. Helper Functions
 # -------------------------------
 @st.cache_data
-func def list_stocks():
+def list_stocks():
     """List all stock directories under results/."""
     return sorted(
         [d.name for d in BASE_DIR.iterdir() if d.is_dir()]
