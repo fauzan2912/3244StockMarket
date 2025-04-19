@@ -4,5 +4,9 @@
     "sharpe_ratio": 0.41769791019133456,
     "max_drawdown": -0.28457038133502527,
     "win_rate": 0.49603174603174605,
-    "total_trades": 252
+    "total_trades": 252,
+    "accuracy": 0.49206349206349204,
+    "precision": 0.49206349206349204,
+    "recall": 1.0,
+    "f1_score": 0.6595744680851063
 }

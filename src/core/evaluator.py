@@ -33,7 +33,7 @@ def evaluate_model(model, feature_cols, stock_symbol, test_df, window_id, return
     test_dates = test_df['Date'].values
 
     preds = model.predict(X_test)
-    metrics, strategy_returns = evaluate_trading_strategy(preds, test_returns, test_dates)
+    metrics, strategy_returns = evaluate_trading_strategy(preds, test_returns, test_dates, y_true=y_test)
 
     label = f"{stock_symbol}"
     if model_type:

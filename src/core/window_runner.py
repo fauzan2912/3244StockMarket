@@ -52,61 +52,68 @@ def save_combined_metrics_csv(stock, model, all_metrics):
     print(f"[✓] Saved metrics summary: {filepath}")
 
 def run_rolling_strategy(args):
-    for stock in args.stocks:
-        print(f"\n[START] Running combined strategy for {stock}")
+    # Handle multiple models, including 'all'
+    if 'all' in args.model:
+        model_types = ['logistic', 'rf', 'xgb', 'lstm', 'svm']
+    else:
+        model_types = args.model
 
-        rolling_ranges = generate_yearly_ranges(args.start_date, args.end_date, args.window_size_years, expanding=False)
-        expanding_ranges = generate_yearly_ranges(args.start_date, args.end_date, args.window_size_years, expanding=True)
+    for model in model_types:
+        for stock in args.stocks:
+            print(f"\n[START] Running combined strategy for {stock}")
 
-        full_preds = {'rolling': [], 'expanding': [], 'returns': [], 'dates': []}
-        all_window_metrics = []
+            rolling_ranges = generate_yearly_ranges(args.start_date, args.end_date, args.window_size_years, expanding=False)
+            expanding_ranges = generate_yearly_ranges(args.start_date, args.end_date, args.window_size_years, expanding=True)
 
-        for i, ((roll_train_start, roll_train_end, test_start, test_end),
-                (exp_train_start, exp_train_end, _, _)) in enumerate(zip(rolling_ranges, expanding_ranges)):
+            full_preds = {'rolling': [], 'expanding': [], 'returns': [], 'dates': []}
+            all_window_metrics = []
 
-            print(f"\n[Window {i+1}] Test: {test_start.date()} → {test_end.date()}")
-            print(f"  Rolling Train: {roll_train_start.date()} to {roll_train_end.date()}")
-            print(f"  Expand  Train: {exp_train_start.date()} to {exp_train_end.date()}")
+            for i, ((roll_train_start, roll_train_end, test_start, test_end),
+                    (exp_train_start, exp_train_end, _, _)) in enumerate(zip(rolling_ranges, expanding_ranges)):
 
-            roll_train_df, test_df = prepare_time_window_data(stock, roll_train_start, roll_train_end, test_start, test_end)
-            exp_train_df, _ = prepare_time_window_data(stock, exp_train_start, exp_train_end, test_start, test_end)
+                print(f"\n[Window {i+1}] Test: {test_start.date()} → {test_end.date()}")
+                print(f"  Rolling Train: {roll_train_start.date()} to {roll_train_end.date()}")
+                print(f"  Expand  Train: {exp_train_start.date()} to {exp_train_end.date()}")
 
-            if test_df is None or test_df.empty or roll_train_df is None or exp_train_df is None:
-                print("[SKIP] Incomplete or empty data")
-                continue
+                roll_train_df, test_df = prepare_time_window_data(stock, roll_train_start, roll_train_end, test_start, test_end)
+                exp_train_df, _ = prepare_time_window_data(stock, exp_train_start, exp_train_end, test_start, test_end)
 
-            model_roll, features = train_model(args.model, stock, roll_train_df, meta=(test_start, 'rolling'))
-            model_exp, _ = train_model(args.model, stock, exp_train_df, meta=(test_start, 'expanding'))
+                if test_df is None or test_df.empty or roll_train_df is None or exp_train_df is None:
+                    print("[SKIP] Incomplete or empty data")
+                    continue
 
-            print(f"[✓] Rolling Params ({test_start.strftime('%Y-%m')}): {model_roll.get_params()}")
-            print(f"[✓] Expanding Params ({test_start.strftime('%Y-%m')}): {model_exp.get_params()}")
+                model_roll, features = train_model(model, stock, roll_train_df, meta=(test_start, 'rolling'))
+                model_exp, _ = train_model(model, stock, exp_train_df, meta=(test_start, 'expanding'))
 
-            metrics_r, _, preds_r = evaluate_model(model_roll, features, stock, test_df, return_preds=True, model_type=args.model, window_id=f"{test_start.strftime('%Y-%m')}_rolling")
-            metrics_e, _, preds_e = evaluate_model(model_exp, features, stock, test_df, return_preds=True, model_type=args.model, window_id=f"{test_start.strftime('%Y-%m')}_expanding")
+                print(f"[✓] Rolling Params ({test_start.strftime('%Y-%m')}): {model_roll.get_params()}")
+                print(f"[✓] Expanding Params ({test_start.strftime('%Y-%m')}): {model_exp.get_params()}")
 
-            full_preds['rolling'].extend(preds_r)
-            full_preds['expanding'].extend(preds_e)
-            full_preds['returns'].extend(test_df['Returns'].tolist())
-            full_preds['dates'].extend(test_df['Date'].tolist())
+                metrics_r, _, preds_r = evaluate_model(model_roll, features, stock, test_df, return_preds=True, model_type=model, window_id=f"{test_start.strftime('%Y-%m')}_rolling")
+                metrics_e, _, preds_e = evaluate_model(model_exp, features, stock, test_df, return_preds=True, model_type=model, window_id=f"{test_start.strftime('%Y-%m')}_expanding")
 
-            metrics_r.update({'strategy': 'rolling', 'date': test_start.strftime('%Y-%m')})
-            metrics_e.update({'strategy': 'expanding', 'date': test_start.strftime('%Y-%m')})
-            all_window_metrics.extend([metrics_r, metrics_e])
+                full_preds['rolling'].extend(preds_r)
+                full_preds['expanding'].extend(preds_e)
+                full_preds['returns'].extend(test_df['Returns'].tolist())
+                full_preds['dates'].extend(test_df['Date'].tolist())
 
-        plot_comparison_cumulative_returns(
-            rolling_preds=full_preds['rolling'],
-            expanding_preds=full_preds['expanding'],
-            actual_returns=full_preds['returns'],
-            dates=full_preds['dates'],
-            strategy_labels=['Rolling', 'Expanding'],
-            title=f"{stock} {args.model.upper()} - Full Strategy Comparison",
-            save_name=f"{stock}_{args.model}_full_comparison.png"
-        )
+                metrics_r.update({'strategy': 'rolling', 'date': test_start.strftime('%Y-%m')})
+                metrics_e.update({'strategy': 'expanding', 'date': test_start.strftime('%Y-%m')})
+                all_window_metrics.extend([metrics_r, metrics_e])
 
-        save_combined_metrics_csv(stock, args.model, all_window_metrics)
+            plot_comparison_cumulative_returns(
+                rolling_preds=full_preds['rolling'],
+                expanding_preds=full_preds['expanding'],
+                actual_returns=full_preds['returns'],
+                dates=full_preds['dates'],
+                strategy_labels=['Rolling', 'Expanding'],
+                title=f"{stock} {model.upper()} - Full Strategy Comparison",
+                save_name=f"{stock}_{model}_full_comparison.png"
+            )
 
-        # Optional: clean up any "latest" files
-        clean_latest_files(stock, args.model)
+            save_combined_metrics_csv(stock, model, all_window_metrics)
+
+            # Optional: clean up any "latest" files
+            clean_latest_files(stock, model)
 
 def clean_latest_files(stock, model):
     folder = os.path.join("results", stock)

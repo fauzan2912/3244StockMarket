@@ -26,7 +26,9 @@ def beep():
 def main():
     parser = argparse.ArgumentParser(description="Run half-yearly rolling and expanding strategy")
     parser.add_argument('--stocks', nargs='+', required=True, help="List of stock tickers, e.g., AAPL GOOGL")
-    parser.add_argument('--model', type=str, required=True, help="Model type to use (e.g., 'lstm', 'svm', 'rf')")
+    parser.add_argument('--model', type=str, nargs='+', 
+                    choices=['logistic', 'rf', 'xgb', 'lstm', 'svm', 'all'],
+                    help='Model type(s) to train')
     parser.add_argument('--start_date', type=str, required=True, help="Start date for data window (YYYY-MM-DD)")
     parser.add_argument('--end_date', type=str, required=True, help="End date for data window (YYYY-MM-DD)")
     parser.add_argument('--window_size_years', type=int, default=1, help="Window size in years (default: 1)")
