@@ -17,7 +17,7 @@ This project implements a **rolling vs expanding window forecasting pipeline** f
 
 ### 1. Clone the project
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/darderrdur17/3244StockMarket
 cd 3244StockMarket
 ```
 
@@ -36,14 +36,19 @@ pip install -r requirements.txt
 
 ### Run the pipeline:
 ```bash
-python main.py --stocks AAPL --model svm --start_date 2010-01-01 --end_date 2017-12-31
+python main.py --mode all --stocks AAPL MSFT BAC CSCO F GE HPQ INTC PFE SIRI --model all --start_date 2010-01-01 --end_date 2017-12-31
+```
+
+### Run with specific models:
+```bash
+python main.py --mode all --stocks AAPL MSFT ... --model logistic rf lstm --start_date ...
 ```
 
 ### Required Arguments:
 | Argument       | Description                                |
 |----------------|--------------------------------------------|
 | `--stocks`     | One or more stock tickers (e.g. `AAPL`)    |
-| `--model`      | Model to use: `svm`, `logistic`, `rf`      |
+| `--model`      | One or more models: `logistic`, `rf`, `svm`, `xgb`, `lstm`, `attention`, `deep_rnn`, or `all` |
 | `--start_date` | Start date of your dataset window          |
 | `--end_date`   | End date of your dataset window            |
 
@@ -82,8 +87,8 @@ python performance.py
 - Train from `start_date` up to the current test period
 - Predict on 1-year ahead
 - Window expands every 1 year
-## 📈 Evaluation Metrics
 
+## 📈 Evaluation Metrics
 Each strategy is evaluated using:
 
 ### 🧮 Financial Metrics
@@ -101,6 +106,8 @@ Each strategy is evaluated using:
 - **F1 Score**
 
 All metrics are saved in `metrics.json` for each stock/model/year combination, and summarized via `performance.py`.
+
+These include both finance-focused (e.g. Sharpe, drawdown) and ML-focused (e.g. F1, precision) metrics, allowing multi-dimensional comparison across strategies.
 
 ---
 
@@ -142,6 +149,11 @@ It compares:
 - ⚫ Buy & Hold benchmark
 
 ---
+
+## 📌 Interpretation
+- A higher Sharpe Ratio indicates better risk-adjusted returns.
+- The model with the highest average F1 Score may be most reliable in directional classification.
+- Use `performance.py` to aggregate and rank models by strategy.
 
 ## 📌 Notes
 
