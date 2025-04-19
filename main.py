@@ -35,9 +35,6 @@ def main():
 
     args = parser.parse_args()
     run_rolling_strategy(args)
-    
-    # Trigger sound when processing completes.
-    beep()
 
 if __name__ == "__main__":
     main()
