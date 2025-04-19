@@ -1,11 +1,11 @@
 # src/core/model_factory.py
 
-from models.svm import SVMModel
-from models.lstm import LSTMModel
-from models.attention_lstm import AttentionLSTMModel
-from models.rf import RandomForestModel
-from models.deep_rnn import DeepRNNModel
-from models.xgboost import XgboostModel
+from src.tuning.svm import tune_svm
+from src.tuning.logistic import tune_logistic
+from src.tuning.rf import tune_random_forest
+from src.tuning.lstm import tune_lstm
+from src.tuning.attention_lstm import tune_attention_lstm
+from src.tuning.deep_rnn import tune_deep_rnn
 
 
 def get_model(model_type: str, **kwargs):
@@ -21,20 +21,33 @@ def get_model(model_type: str, **kwargs):
 
     Raises:
         ValueError: If model_type is not recognized.
+        - best params dictionary (or list of dicts if model_type == 'all')
+        - model object(s)
     """
-    model_map = {
-        'svm': SVMModel,
-        'lstm': LSTMModel,
-        'attention_lstm': AttentionLSTMModel,
-        'rf': RandomForestModel,
-        'deep_rnn': DeepRNNModel,
-        'xgboost': XgboostModel,
+    tuning_map = {
+        "svm": tune_svm,
+        "logistic": tune_logistic,
+        "rf": tune_random_forest,
+        "lstm": tune_lstm,
+        "attention_lstm": tune_attention_lstm,
+        "deep_rnn": tune_deep_rnn,
     }
+
 
     try:
         ModelClass = model_map[model_type]
     except KeyError:
         valid = ', '.join(model_map.keys())
         raise ValueError(f"Unknown model type '{model_type}'. Valid options are: {valid}.")
+
+    if model_type == "all":
+        results = {}
+        for mtype, func in tuning_map.items():
+            print(f"\n--- Tuning model: {mtype} ---")
+            best_params, model = func(X_train, y_train, X_val, y_val, val_returns)
+            results[mtype] = (best_params, model)
+        return results  # You'll need to handle this result differently in calling code
+    elif model_type not in tuning_map:
+        raise ValueError(f"Unsupported model type for tuning: {model_type}")
 
     return ModelClass(**kwargs)

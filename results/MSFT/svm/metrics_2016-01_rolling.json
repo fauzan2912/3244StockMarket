@@ -1,0 +1,12 @@
+{
+    "cumulative_return": -0.5015792085021509,
+    "annualized_return": -0.5015792085021509,
+    "sharpe_ratio": -3.0151677562940513,
+    "max_drawdown": -0.5413452529623671,
+    "win_rate": 0.38492063492063494,
+    "total_trades": 252,
+    "accuracy": 0.5,
+    "precision": 0.5373134328358209,
+    "recall": 0.2748091603053435,
+    "f1_score": 0.36363636363636365
+}

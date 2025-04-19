@@ -82,8 +82,13 @@ def plot_comparison_cumulative_returns(rolling_preds, expanding_preds, actual_re
     plt.legend(loc='upper left')
     plt.tight_layout()
 
-    # Save to results folder
-    result_path = os.path.join("results", save_name)
+    # Save inside results/{stock}/{model}/
+    stock, model = save_name.split("_")[:2]  # e.g., "AAPL_svm_full_comparison.png"
+    save_dir = os.path.join("results", stock, model)
+    os.makedirs(save_dir, exist_ok=True)
+
+    result_path = os.path.join(save_dir, save_name)
+
     plt.savefig(result_path, dpi=300)
     plt.close()
     print(f"[✓] Saved comparison plot: {result_path}")

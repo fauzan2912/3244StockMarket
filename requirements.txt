@@ -9,3 +9,6 @@ flask
 ipython
 transformers
 tf-keras
+scikeras
+tqdm
+seaborn

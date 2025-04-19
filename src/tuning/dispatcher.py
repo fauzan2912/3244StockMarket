@@ -21,6 +21,8 @@ def get_model(model_type: str, **kwargs):
 
     Raises:
         ValueError: If model_type is not recognized.
+        - best params dictionary (or list of dicts if model_type == 'all')
+        - model object(s)
     """
     tuning_map = {
         "svm": tune_svm,
@@ -31,10 +33,21 @@ def get_model(model_type: str, **kwargs):
         "deep_rnn": tune_deep_rnn,
     }
 
+
     try:
         ModelClass = model_map[model_type]
     except KeyError:
         valid = ', '.join(model_map.keys())
         raise ValueError(f"Unknown model type '{model_type}'. Valid options are: {valid}.")
+
+    if model_type == "all":
+        results = {}
+        for mtype, func in tuning_map.items():
+            print(f"\n--- Tuning model: {mtype} ---")
+            best_params, model = func(X_train, y_train, X_val, y_val, val_returns)
+            results[mtype] = (best_params, model)
+        return results  # You'll need to handle this result differently in calling code
+    elif model_type not in tuning_map:
+        raise ValueError(f"Unsupported model type for tuning: {model_type}")
 
     return ModelClass(**kwargs)

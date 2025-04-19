@@ -55,12 +55,18 @@ Each stock’s results are saved in a dedicated folder:
 ```
 results/
 └── AAPL/
-    ├── model_2012-01_rolling.pkl
-    ├── features_2012-01_rolling.pkl
-    ├── metrics_2012-01_rolling.json
-    ├── metrics_2012-01_expanding.json
-    ├── AAPL_svm_full_comparison.png      ← Final performance chart
-    └── AAPL_svm_metrics_summary.csv      ← All metrics across windows
+    ├── logistic
+         ├── model_2012-01_rolling.pkl
+         ├── features_2012-01_rolling.pkl
+         ├── metrics_2012-01_rolling.json
+         ├── metrics_2012-01_expanding.json
+         ├── AAPL_svm_full_comparison.png      ← Final performance chart
+         └── AAPL_svm_metrics_summary.csv      ← All metrics across windows
+```
+
+### Fetch the aggregated outputs:
+```bash
+python performance.py
 ```
 
 ---
@@ -75,23 +81,51 @@ results/
 ### Expanding Window
 - Train from `start_date` up to the current test period
 - Predict on 1-year ahead
+- Window expands every 1 year
+## 📈 Evaluation Metrics
 
-### Evaluation Metrics
-- ✅ Cumulative Return
-- ✅ Sharpe Ratio
-- ✅ Max Drawdown
-- ✅ Win Rate
-- ✅ Total Trades
+Each strategy is evaluated using:
+
+### 🧮 Financial Metrics
+- **Cumulative Return**
+- **Annualized Return**
+- **Sharpe Ratio**
+- **Maximum Drawdown**
+- **Win Rate**
+- **Total Trades**
+
+### 📊 Machine Learning Metrics
+- **Accuracy**
+- **Precision**
+- **Recall**
+- **F1 Score**
+
+All metrics are saved in `metrics.json` for each stock/model/year combination, and summarized via `performance.py`.
 
 ---
 
 ## ⚙️ Models
 
-| Model Type | Description |
-|------------|-------------|
-| `svm`      | Scikit-learn SVC with tuning over C, kernel, gamma |
-| `logistic` | Logistic Regression with L2 penalty tuning |
-| `rf`       | Random Forest with n_estimators, depth, and sampling tuning |
+| Model Name     | Description                                                                 |
+|----------------|-----------------------------------------------------------------------------|
+| `logistic`     | Logistic Regression — simple and interpretable baseline                     |
+| `rf`           | Random Forest Classifier — non-linear ensemble with strong baseline accuracy|
+| `svm`          | Support Vector Machine — margin-based classifier with kernel support        |
+| `xgb`          | XGBoost Classifier — powerful gradient-boosted tree model                   |
+| `lstm`         | LSTM (Long Short-Term Memory) — recurrent neural net for temporal patterns  |
+| `attention`    | Attention-based LSTM — enhanced LSTM with attention for time-step weighting |
+| `deep_rnn`     | Multi-layer RNN — a deep sequential model using stacked recurrent layers    |
+
+---
+
+## 📁 Project Structure Highlights
+
+- `main.py` – CLI runner for batch training
+- `src/core/` – training and window strategy logic
+- `src/models/` – individual model implementations (e.g., `model_lstm.py`, `model_svm.py`)
+- `src/tuning/` – hyperparameter tuning logic per model
+- `evaluation/` – metric calculators and visualizers
+- `results/` – saved models, predictions, and metric outputs
 
 ---
 

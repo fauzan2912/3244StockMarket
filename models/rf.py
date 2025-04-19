@@ -15,6 +15,9 @@ class RandomForestModel:
 
     def predict(self, X):
         return self.model.predict(X)
+    
+    def get_params(self):
+        return self.params
 
     def get_feature_importance(self, feature_names=None):
         if self.feature_importance is None:
