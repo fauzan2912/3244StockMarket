@@ -32,9 +32,17 @@ def generate_yearly_ranges(start_date, end_date, window_years=1, expanding=False
     return ranges
 
 def save_combined_metrics_csv(stock, model, all_metrics):
-    path = os.path.join("results", stock)
+    path = os.path.join("results", stock, model)
     os.makedirs(path, exist_ok=True)
+    
     filepath = os.path.join(path, f"{stock}_{model}_metrics_summary.csv")
+
+    with open(filepath, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=list(all_metrics[0].keys()))
+        writer.writeheader()
+        writer.writerows(all_metrics)
+
+    print(f"[✓] Saved metrics summary: {filepath}")
 
     with open(filepath, 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=list(all_metrics[0].keys()))
@@ -73,8 +81,8 @@ def run_rolling_strategy(args):
             print(f"[✓] Rolling Params ({test_start.strftime('%Y-%m')}): {model_roll.get_params()}")
             print(f"[✓] Expanding Params ({test_start.strftime('%Y-%m')}): {model_exp.get_params()}")
 
-            metrics_r, _, preds_r = evaluate_model(model_roll, features, stock, test_df, return_preds=True, window_id=f"{test_start.strftime('%Y-%m')}_rolling")
-            metrics_e, _, preds_e = evaluate_model(model_exp, features, stock, test_df, return_preds=True, window_id=f"{test_start.strftime('%Y-%m')}_expanding")
+            metrics_r, _, preds_r = evaluate_model(model_roll, features, stock, test_df, return_preds=True, model_type=args.model, window_id=f"{test_start.strftime('%Y-%m')}_rolling")
+            metrics_e, _, preds_e = evaluate_model(model_exp, features, stock, test_df, return_preds=True, model_type=args.model, window_id=f"{test_start.strftime('%Y-%m')}_expanding")
 
             full_preds['rolling'].extend(preds_r)
             full_preds['expanding'].extend(preds_e)

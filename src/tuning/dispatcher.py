@@ -11,8 +11,8 @@ def tune_model_dispatcher(model_type, X_train, y_train, X_val, y_val, val_return
     Dispatch tuning based on model type.
 
     Returns:
-        - best params dictionary
-        - model object (including scaler if applicable)
+        - best params dictionary (or list of dicts if model_type == 'all')
+        - model object(s)
     """
     tuning_map = {
         "svm": tune_svm,
@@ -22,7 +22,14 @@ def tune_model_dispatcher(model_type, X_train, y_train, X_val, y_val, val_return
         "deep_rnn": tune_deep_rnn,
     }
 
-    if model_type not in tuning_map:
+    if model_type == "all":
+        results = {}
+        for mtype, func in tuning_map.items():
+            print(f"\n--- Tuning model: {mtype} ---")
+            best_params, model = func(X_train, y_train, X_val, y_val, val_returns)
+            results[mtype] = (best_params, model)
+        return results  # You'll need to handle this result differently in calling code
+    elif model_type not in tuning_map:
         raise ValueError(f"Unsupported model type for tuning: {model_type}")
 
     return tuning_map[model_type](X_train, y_train, X_val, y_val, val_returns)

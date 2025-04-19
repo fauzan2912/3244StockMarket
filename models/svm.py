@@ -31,6 +31,9 @@ class SVMModel:
     def predict_proba(self, X):
         X_scaled = self.scaler.transform(X)
         return self.model.predict_proba(X_scaled)[:, 1]
+    
+    def get_params(self):
+        return self.params
 
     def get_feature_importance(self, feature_names):
         if self.model.kernel == 'linear':
