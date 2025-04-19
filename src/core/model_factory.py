@@ -1,4 +1,5 @@
 from models.svm import SVMModel
+from models.logistic import LogisticModel
 from models.lstm import LSTMModel
 from models.attention_lstm import AttentionLSTMModel
 from models.rf import RandomForestModel
@@ -7,6 +8,7 @@ from models.deep_rnn import DeepRNNModel
 def get_model(model_type, **kwargs):
     model_map = {
         "svm": SVMModel,
+        "logistic": LogisticModel,
         "lstm": LSTMModel,
         "attention_lstm": AttentionLSTMModel,
         "rf": RandomForestModel,
