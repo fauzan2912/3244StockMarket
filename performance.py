@@ -69,12 +69,6 @@ if __name__ == "__main__":
         # Identify best model for each metric
         print("\n=== Best Model per Metric ===")
         for metric in summary.columns:
-            if metric == "max_drawdown":
-                best_model = summary[metric].idxmin()
-                best_value = summary[metric].min()
-            else:
-                best_model = summary[metric].idxmax()
-                best_value = summary[metric].max()
-
+            best_model = summary[metric].idxmax()
+            best_value = summary[metric].max()
             print(f"{metric}: {best_model} (score: {best_value:.4f})")
-
