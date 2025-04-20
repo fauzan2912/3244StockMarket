@@ -12,3 +12,4 @@ tf-keras
 scikeras
 tqdm
 seaborn
+streamlit
