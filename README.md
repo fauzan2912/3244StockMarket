@@ -145,8 +145,8 @@ results/{stock}/{stock}_{model}_full_comparison.png
 
 It compares:
 - 🔵 Rolling strategy
-- 🟢 Expanding strategy
-- ⚫ Buy & Hold benchmark
+- 🟠 Expanding strategy
+- 🟢 Buy & Hold benchmark
 
 ---
 
