@@ -163,6 +163,26 @@ It compares:
 
 ---
 
+## 📊 Dashboard Visualization (Streamlit)
+
+Users can explore model predictions, strategy comparisons, and cumulative returns through an interactive dashboard.
+
+### 1. Install Streamlit
+```bash
+pip install streamlit
+```
+
+### 2. Run the dashboard
+```bash
+streamlit run app.py
+```
+
+This will launch a local server where users can visually compare:
+- Rolling vs Expanding vs Buy & Hold strategies
+- Model-wise performance metrics
+
+--- 
+
 ## 🧼 Optional Enhancements
 
 - Add new models to `models/` and register in `model_factory.py`

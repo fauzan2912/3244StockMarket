@@ -64,7 +64,7 @@ if __name__ == "__main__":
         print("\n=== Model Performance Summary ===")
         print(summary.round(4))
         summary.to_csv("summary.csv")
-        print("\n[✓] Saved summary to model_comparison_summary.csv")
+        print("\n[✓] Saved summary to summary.csv")
 
         # Identify best model for each metric
         print("\n=== Best Model per Metric ===")
