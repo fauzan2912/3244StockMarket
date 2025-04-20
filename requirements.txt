@@ -7,8 +7,7 @@ torch
 statsmodels
 flask
 ipython
-transformers
-tf-keras
+tensorflow-intel==2.18.0
 scikeras
 tqdm
 seaborn
