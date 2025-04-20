@@ -1,8 +1,12 @@
 {
-    "cumulative_return": -0.8822856150551687,
-    "annualized_return": -0.9099086219480826,
-    "sharpe_ratio": -6.885655387221982,
-    "max_drawdown": -0.8869686354278817,
-    "win_rate": 0.29464285714285715,
-    "total_trades": 224
+    "cumulative_return": -0.9229268532674946,
+    "annualized_return": -0.9244910701295519,
+    "sharpe_ratio": -7.830014741914607,
+    "max_drawdown": -0.9209195164478841,
+    "win_rate": 0.292,
+    "total_trades": 250,
+    "accuracy": 0.476,
+    "precision": 0.45161290322580644,
+    "recall": 0.603448275862069,
+    "f1_score": 0.5166051660516605
 }
