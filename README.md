@@ -17,7 +17,7 @@ This project implements a **rolling vs expanding window forecasting pipeline** f
 
 ### 1. Clone the project
 ```bash
-git clone https://github.com/darderrdur17/3244StockMarket
+git clone https://github.com/fauzan2912/3244StockMarket
 cd 3244StockMarket
 ```
 
